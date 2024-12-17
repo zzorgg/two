@@ -11,10 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        project: [favorites, escrow]
-
     steps:
       - uses: actions/checkout@v4
       # TODO: change to metadaoproject/setup-anchor@v2.2
@@ -62,12 +58,8 @@ jobs:
           rm /home/runner/.cargo/bin/rust-analyzer /home/runner/.cargo/bin/rustfmt /home/runner/.cargo/bin/cargo-fmt
           rustup update
 
-      # TODO: remove fix for semver issue once
-      # https://github.com/solana-labs/solana/issues/32503 is resolved
-      - name: Test the ${{ matrix.project }} project builds and tests pass
+      - name: Test the project builds and tests pass
         run: |
-          cd labs/${{ matrix.project }}
-          echo "----------------------------------------"
           echo "Creating a keypair..."
           solana-keygen new --no-bip39-passphrase -s -o deleteme.json
           echo SECRET_KEY="$(cat deleteme.json)"> .env
