@@ -1,6 +1,6 @@
 # Anchor Escrow
 
-An Anchor Escrow Project: ![CI Badge](https://github.com/your-username/your-repo/actions/workflows/your-workflow.yml/badge.svg)
+An Anchor Escrow Project: ![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
 
 ## Introduction
 
@@ -30,6 +30,8 @@ Anchor: anchor-cli 0.30.1
 Node: v22.11.0
 Rust: rustc 1.84.0-nightly (03ee48451 2024-11-18)
 ```
+
+If you use other versions, you should be aware that things may not work.
 
 ## Usage
 
