@@ -1,5 +1,7 @@
 # Anchor Escrow
 
+An Anchor Escrow Project: ![CI Badge](https://github.com/your-username/your-repo/actions/workflows/your-workflow.yml/badge.svg)
+
 ## Introduction
 
 This Solana program is called an **_escrow_** - it allows a user to swap a specific amount of one token for a desired amount of another token.
@@ -38,3 +40,7 @@ export RUSTUP_TOOLCHAIN='nightly-2024-11-19'
 ```
 
 Then `anchor test`, `anchor deploy` etc.
+
+## Changelog
+
+This project has a [CHANGELOG](CHANGELOG.md). Go read it.

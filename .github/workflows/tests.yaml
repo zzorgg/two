@@ -58,6 +58,7 @@ jobs:
           rm /home/runner/.cargo/bin/rust-analyzer /home/runner/.cargo/bin/rustfmt /home/runner/.cargo/bin/cargo-fmt
           rustup update
 
+      # TODO RUSTUP_TOOLCHAIN fix when no longer needed, see README
       - name: Test the project builds and tests pass
         run: |
           echo "Creating a keypair..."
@@ -69,6 +70,7 @@ jobs:
           npm i
           echo "----------------------------------------"
           echo "Running 'anchor test'..."
+          export RUSTUP_TOOLCHAIN='nightly-2024-11-19'
           anchor test 2>&1 | tee -a build.log
           echo "----------------------------------------"
           echo "build.log..."
