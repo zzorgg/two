@@ -1,6 +1,8 @@
 # Anchor Escrow
 
-An Anchor Escrow Project: ![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
+An Anchor Escrow Project which is always up to date: ![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
+
+It's often said that all other programs are modification an an Escrow app, so if you want an example of a Solana app that does something with actual value, here's the best place to start.
 
 ## Introduction
 
@@ -13,6 +15,10 @@ Without our program, users would have to engage in manual token swapping. Imagin
 Our Escrow program is designed to provide a secure environment for users to swap a specific amount of one token with a specific amount of another token without having to trust each other.
 
 Better yet, since our program allows Alice and Bob to transact directly with each other, they both get a hundred percent of the token they desire!
+
+## Want a better explanation?
+
+Check out the [Solana Professional Education](https://github.com/mikemaccana/professional-education) repo which has an [animated explanation](https://github.com/mikemaccana/professional-education/blob/main/presentations/Solana%20Professional%20Education.key) of the
 
 ## Versions
 
