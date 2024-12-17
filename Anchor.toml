@@ -15,4 +15,9 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+# Silence:
+# "(node:23320) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead"
+# web3.js v1 requires whatwg-url which uses this old library
+# See https://stackoverflow.com/questions/68774489/punycode-is-deprecated-in-npm-what-should-i-replace-it-with
+# TODO: Remove this once web3.js v2 is used
+test = "npx esrun --node-no-warnings tests/*.ts"
