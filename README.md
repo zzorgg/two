@@ -1,4 +1,4 @@
-# Anchor Escrow
+# Anchor Escrow 2025
 
 An Anchor Escrow Project which is always up to date: ![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
 
