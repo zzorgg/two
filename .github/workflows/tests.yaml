@@ -47,16 +47,7 @@ jobs:
         run: |
           solana-keygen new --no-bip39-passphrase
 
-      # Fix:
-      # warning: tool `rust-analyzer` is already installed, remove it from `/home/runner/.cargo/bin`, then run `rustup update` to have rustup manage this tool.
-      # warning: tool `rustfmt` is already installed, remove it from `/home/runner/.cargo/bin`, then run `rustup update` to have rustup manage this tool.
-      # warning: tool `cargo-fmt` is already installed, remove it from `/home/runner/.cargo/bin`, then run `rustup update` to have rustup manage this tool.
-      - name: Fix already installed tools
-        run: |
-          rm /home/runner/.cargo/bin/rust-analyzer /home/runner/.cargo/bin/rustfmt /home/runner/.cargo/bin/cargo-fmt
-          rustup update
-
-      # TODO RUSTUP_TOOLCHAIN fix when no longer needed, see README
+      # TODO: remove RUSTUP_TOOLCHAIN fix when no longer needed, see README
       - name: Test the project builds and tests pass
         run: |
           echo "Creating a keypair..."
