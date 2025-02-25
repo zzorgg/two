@@ -73,7 +73,7 @@ describe("escrow", async () => {
       ],
       1 * LAMPORTS_PER_SOL,
       connection,
-      payer
+      payer,
     );
 
     // Alice will be the maker (creator) of the offer
@@ -118,7 +118,7 @@ describe("escrow", async () => {
     // Then determine the account addresses we'll use for the offer and the vault
     const offer = PublicKey.findProgramAddressSync(
       [Buffer.from("offer"), accounts.maker.toBuffer(), offerId.toArrayLike(Buffer, "le", 8)],
-      program.programId
+      program.programId,
     )[0];
 
     const vault = getAssociatedTokenAddressSync(accounts.tokenMintA, offer, true, TOKEN_PROGRAM);
@@ -170,5 +170,65 @@ describe("escrow", async () => {
     const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountB);
     const aliceTokenAccountBalanceAfter = new BN(aliceTokenAccountBalanceAfterResponse.value.amount);
     assert(aliceTokenAccountBalanceAfter.eq(tokenBWantedAmount));
+  });
+
+  it("Returns tokens to Alice when she refunds her offer", async () => {
+    // Create a new offer first
+    const offerId = getRandomBigNumber();
+
+    const offer = PublicKey.findProgramAddressSync(
+      [Buffer.from("offer"), accounts.maker.toBuffer(), offerId.toArrayLike(Buffer, "le", 8)],
+      program.programId,
+    )[0];
+
+    const vault = getAssociatedTokenAddressSync(accounts.tokenMintA, offer, true, TOKEN_PROGRAM);
+
+    accounts.offer = offer;
+    accounts.vault = vault;
+
+    // Make the offer
+    let transactionSignature = await program.methods
+      .makeOffer(offerId, tokenAOfferedAmount, tokenBWantedAmount)
+      // @ts-expect-error the error says tokenMintA, tokenMintB, tokenProgram are missing, however they are created in the before hook
+      .accounts({ ...accounts })
+      .signers([alice])
+      .rpc();
+
+    await confirmTransaction(connection, transactionSignature);
+
+    // Get Alice's token balance before refund
+    const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountA);
+    const aliceTokenAccountBalanceBefore = new BN(aliceTokenAccountBalanceBeforeResponse.value.amount);
+
+    // Refund the offer
+    transactionSignature = await program.methods
+      .refundOffer()
+      .accounts({
+        maker: accounts.maker,
+        tokenMintA: accounts.tokenMintA,
+        makerTokenAccountA: accounts.makerTokenAccountA,
+        offer: accounts.offer,
+        vault: accounts.vault,
+        tokenProgram: accounts.tokenProgram,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
+
+    await confirmTransaction(connection, transactionSignature);
+
+    // Check tokens were returned to Alice
+    const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountA);
+    const aliceTokenAccountBalanceAfter = new BN(aliceTokenAccountBalanceAfterResponse.value.amount);
+    assert(aliceTokenAccountBalanceAfter.gt(aliceTokenAccountBalanceBefore));
+
+    // Verify vault is closed
+    try {
+      await connection.getTokenAccountBalance(accounts.vault);
+      assert(false, "Vault should be closed");
+    } catch (thrownObject) {
+      const error = thrownObject as Error;
+      assert(thrownObject.name === "TokenAccountNotFoundError");
+    }
   });
 });
