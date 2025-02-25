@@ -20,4 +20,4 @@ wallet = "~/.config/solana/id.json"
 # web3.js v1 requires whatwg-url which uses this old library
 # See https://stackoverflow.com/questions/68774489/punycode-is-deprecated-in-npm-what-should-i-replace-it-with
 # TODO: Remove this once web3.js v2 is used
-test = "npx esrun --node-no-warnings tests/*.ts"
+test = "npx tsx --test --no-warnings tests/*.ts"
