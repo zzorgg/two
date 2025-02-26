@@ -1,12 +1,12 @@
 pub mod constants;
 pub mod error;
-pub mod instructions;
+pub mod handlers;
 pub mod state;
 
 use anchor_lang::prelude::*;
 
 pub use constants::*;
-pub use instructions::*;
+pub use handlers::*;
 pub use state::*;
 
 declare_id!("qbuMdeYxYJXBjU6C6qFKjZKjXmrU83eDQomHdrch826");
@@ -21,17 +21,17 @@ pub mod escrow {
         token_a_offered_amount: u64,
         token_b_wanted_amount: u64,
     ) -> Result<()> {
-        instructions::make_offer::send_offered_tokens_to_vault(&context, token_a_offered_amount)?;
-        instructions::make_offer::save_offer(context, id, token_b_wanted_amount)
+        handlers::make_offer::send_offered_tokens_to_vault(&context, token_a_offered_amount)?;
+        handlers::make_offer::save_offer(context, id, token_b_wanted_amount)
     }
 
     pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
-        instructions::take_offer::send_wanted_tokens_to_maker(&context)?;
-        instructions::take_offer::withdraw_and_close_vault(context)
+        handlers::take_offer::send_wanted_tokens_to_maker(&context)?;
+        handlers::take_offer::withdraw_and_close_vault(context)
     }
 
     pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
-        instructions::refund::return_tokens_to_maker(&context)?;
-        instructions::refund::close_vault(&context)
+        handlers::refund::return_tokens_to_maker(&context)?;
+        handlers::refund::close_vault(&context)
     }
 }
