@@ -4,15 +4,18 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.1",
-    "@solana-developers/helpers": "^2.5.6",
-    "@solana/spl-token": "^0.4.9",
-    "@solana/web3.js": "^1.98.0",
+    "@solana/web3.js": "^2.0.0",
+    "@helius-dev/kite": "^1.0.1",
+    "codama": "^1.2.6",
+    "@codama/nodes-from-anchor": "^1.1.6",
+    "@codama/renderers": "^1.0.14",
     "tsx": "^4.19.3"
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^22.13.5",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2"
-  }
+  },
+  "type": "module"
 }
