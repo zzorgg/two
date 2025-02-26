@@ -52,12 +52,6 @@ If you use other versions, you should be aware that things may not work.
 
 ## Usage
 
-[Current releases of Rust mean you may wish to set the following environment variable](https://solana.stackexchange.com/questions/17777/unexpected-cfg-condition-value-solana):
-
-```bash
-export RUSTUP_TOOLCHAIN='nightly-2024-11-19'
-```
-
 Then `anchor test`, `anchor deploy` etc.
 
 ## Changelog and credits
