@@ -204,6 +204,7 @@ describe("escrow", async () => {
     transactionSignature = await program.methods
       .refundOffer()
       .accounts({
+        // @ts-expect-error maker exists, the tests pass with it
         maker: accounts.maker,
         tokenMintA: accounts.tokenMintA,
         makerTokenAccountA: accounts.makerTokenAccountA,
