@@ -1,21 +1,23 @@
 {
+  "name": "escrow",
+  "version": "1.0.0",
   "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
-  "dependencies": {
-    "@solana/web3.js": "^2.0.0",
-    "@helius-dev/kite": "^1.0.1",
-    "codama": "^1.2.6",
-    "@codama/nodes-from-anchor": "^1.1.6",
-    "@codama/renderers": "^1.0.14",
-    "tsx": "^4.19.3"
-  },
   "license": "MIT",
   "devDependencies": {
+    "@codama/nodes-from-anchor": "^1.1.6",
+    "@codama/renderers": "^1.0.14",
+    "@helius-dev/kite": "file:../kite",
+    "@solana/web3.js": "^2.0.0",
     "@types/node": "^22.13.5",
+    "codama": "^1.2.6",
     "prettier": "^3.4.2",
-    "typescript": "^5.7.2"
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
   },
   "type": "module"
 }

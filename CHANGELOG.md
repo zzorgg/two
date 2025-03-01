@@ -1,3 +1,11 @@
+## 2025.1
+
+- Added refund handler
+- Added Cursor AI config
+- Move to Codama and Kite for making TS clients
+  - `program.methods.doThing()` becomes `programClient.getDoThingInstruction()`
+  - `create-codama-client.ts` is used to produce a TypeScript client from the Anchor IDL.
+
 ## 2025
 
 - Third party package managers and test tools are removed: the project now uses `npm` for installs and `node` for unit tests.

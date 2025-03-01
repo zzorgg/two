@@ -1,180 +1,254 @@
 import { before, describe, test, it } from "node:test";
 import { assert } from "node:console";
 import * as programClient from "../dist/js-client";
-import { connect } from "@helius-dev/kite";
-import { lamports, address, KeyPairSigner, Address } from "@solana/web3.js";
+import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, TOKEN_PROGRAM } from "@helius-dev/kite";
 
-const SOL = 1_000_000_000n;
+const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
+
+// For debugging. You could delete this, but then someone else will have to recreate it and then they'll be annoyed with you.
+const log = console.log;
+const stringify = (obj: any) => JSON.stringify(obj, null, 2);
+
+import {
+  lamports,
+  getProgramDerivedAddress,
+  getAddressEncoder,
+  address,
+  type KeyPairSigner,
+  type Address,
+} from "@solana/web3.js";
+
 const ONE_SOL = lamports(1n * SOL);
+
+const getRandomBigInt = () => {
+  return BigInt(Math.floor(Math.random() * 1000000000000000000));
+};
 
 // See https://www.quicknode.com/guides/solana-development/tooling/web3-2/program-clients#generate-clients
 describe("Escrow", () => {
+  let connection: Connection;
   let user: KeyPairSigner;
 
   // Alice will be the maker (creator) of the offer
-
   let alice: KeyPairSigner;
 
   // Bob will be the taker (acceptor) of the offer
-
   let bob: KeyPairSigner;
 
   // tokenMintA represents the token Alice is offering
   // tokenMintB represents the token Alice wants in return
-
   let tokenMintA: Address;
   let tokenMintB: Address;
 
+  let vault: Address;
+  let offer: Address;
+
+  let offerId: bigint;
+
+  let aliceTokenAccountA: Address;
+  let bobTokenAccountA: Address;
+  let aliceTokenAccountB: Address;
+
+  let tokenAOfferedAmount = 1_000_000_000n;
+  let tokenBWantedAmount = 1_000_000_000n;
+
   // Create Alice and Bob accounts, 2 token mints, and associated token accounts for both tokens for both users
   before(async () => {
-    const connection = await connect();
+    connection = await connect();
     console.log(programClient);
 
     // This is the user that will pay for the transactions to create the token mints
-    user = await connection.createWallet({ airdropAmount: ONE_SOL });
+    log("Creating user, alice, and bob...");
+    [user, alice, bob] = await connection.createWallets(3, { airdropAmount: ONE_SOL });
+    log("  ✅ User, alice, and bob created");
 
-    [alice, bob] = await connection.createWallets(2, { airdropAmount: ONE_SOL });
-
-    tokenMintA = await connection.createTokenMint(user, 9, "Token A", "TOKEN_A", "https://example.com/token-a", {
-      website: "https://example.com",
-      twitter: "https://twitter.com/example",
+    log("Creating token mints...");
+    tokenMintA = await connection.createTokenMint({
+      mintAuthority: user,
+      decimals: 9,
+      name: "Token A",
+      symbol: "TOKEN_A",
+      uri: "https://example.com/token-a",
+      additionalMetadata: {
+        keyOne: "valueOne",
+        keyTwo: "valueTwo",
+      },
     });
 
-    tokenMintB = await connection.createTokenMint(user, 9, "Token B", "TOKEN_B", "https://example.com/token-b", {
-      website: "https://example.com",
-      twitter: "https://twitter.com/example",
+    tokenMintB = await connection.createTokenMint({
+      mintAuthority: user,
+      decimals: 9,
+      name: "Token B",
+      symbol: "TOKEN_B",
+      uri: "https://example.com/token-b",
+      additionalMetadata: {
+        keyOne: "valueOne",
+        keyTwo: "valueTwo",
+      },
     });
+
+    log("  ✅ Token mints created");
 
     // Alice will have 1_000_000_000 of token A and 0 of token B
-    // Mint 1_000_000_000 of token A to alice
+    log("Minting tokens to Alice's account...");
     await connection.mintTokens(tokenMintA, user, 1_000_000_000n, alice.address);
+    log("  ✅ Tokens minted to Alice's account... ");
+
+    // Get Alice's token A account
+    aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
 
     // Bob will have 0 of token A and 1_000_000_000 of token B
+    log("Minting tokens to bob...");
     await connection.mintTokens(tokenMintB, user, 1_000_000_000n, bob.address);
+    log("  ✅ Tokens minted to bob");
   });
 
-  test("passed", () => {
-    assert(true);
+  test("Puts the tokens Alice offers into the vault when Alice makes an offer", async () => {
+    offerId = getRandomBigInt();
+
+    // Get Bob's token A account (which may not exist yet)
+    bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
+
+    // Get Alice's token B account (which may not exist yet)
+    aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
+
+    // Derive the offer PDA
+    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+      "offer",
+      alice.address,
+      offerId,
+    ]);
+
+    offer = offerPDAAndBump.pda;
+
+    // Derive the vault PDA (which will be an Associated Token Account)
+    vault = await connection.getTokenAccountAddress(offer, tokenMintA, true);
+
+    log("Making offer instruction...");
+
+    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+      maker: alice,
+      tokenMintA,
+      tokenMintB,
+      makerTokenAccountA: aliceTokenAccountA,
+      offer,
+      vault,
+      id: offerId,
+      tokenAOfferedAmount,
+      tokenBWantedAmount,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    const transactionSignature = await connection.sendTransactionFromInstructions({
+      feePayer: alice,
+      instructions: [makeOfferInstruction],
+    });
+
+    console.log("  ✅ Transaction signature:", transactionSignature);
   });
 
-  // it("Puts the tokens Alice offers into the vault when Alice makes an offer", async () => {
-  //   // Pick a random ID for the offer we'll make
-  //   const offerId = getRandomBigNumber();
+  it("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
+    const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
+      taker: bob,
+      maker: alice.address,
+      tokenMintA,
+      tokenMintB,
+      takerTokenAccountA: bobTokenAccountA,
+      makerTokenAccountB: aliceTokenAccountB,
+      offer: offer,
+      vault: vault,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
 
-  //   // Then determine the account addresses we'll use for the offer and the vault
-  //   const offer = PublicKey.findProgramAddressSync(
-  //     [Buffer.from("offer"), accounts.maker.toBuffer(), offerId.toArrayLike(Buffer, "le", 8)],
-  //     program.programId,
-  //   )[0];
+    const transactionSignature = await connection.sendTransactionFromInstructions({
+      feePayer: alice,
+      instructions: [takeOfferInstruction],
+    });
 
-  //   const vault = getAssociatedTokenAddressSync(accounts.tokenMintA, offer, true, TOKEN_PROGRAM);
+    // Check the offered tokens are now in Bob's account
+    // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
+    const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(bob.address, tokenMintA, true);
 
-  //   accounts.offer = offer;
-  //   accounts.vault = vault;
+    // TODO: why is this any? Types aren't importing maybe?
+    assert(bobTokenAccountBalanceAfterResponse.amount === tokenAOfferedAmount);
 
-  //   const transactionSignature = await program.methods
-  //     .makeOffer(offerId, tokenAOfferedAmount, tokenBWantedAmount)
-  //     // @ts-expect-error the error says tokenMintA, tokenMintB, tokenProgram are missing, however they are created in the before hook
-  //     .accounts({ ...accounts })
-  //     .signers([alice])
-  //     .rpc();
+    // Check the wanted tokens are now in Alice's account
+    // (note: there is no before balance as Alice didn't have any wanted tokens before the transaction)
+    const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(
+      alice.address,
+      tokenMintB,
+      true,
+    );
 
-  //   await confirmTransaction(connection, transactionSignature);
-
-  //   // Check our vault contains the tokens offered
-  //   const vaultBalanceResponse = await connection.getTokenAccountBalance(vault);
-  //   const vaultBalance = new BN(vaultBalanceResponse.value.amount);
-  //   assert(vaultBalance.eq(tokenAOfferedAmount));
-
-  //   // Check our Offer account contains the correct data
-  //   const offerAccount = await program.account.offer.fetch(offer);
-
-  //   assert(offerAccount.maker.equals(alice.publicKey));
-  //   assert(offerAccount.tokenMintA.equals(accounts.tokenMintA));
-  //   assert(offerAccount.tokenMintB.equals(accounts.tokenMintB));
-  //   assert(offerAccount.tokenBWantedAmount.eq(tokenBWantedAmount));
-  // });
-
-  // it("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
-  //   const transactionSignature = await program.methods
-  //     .takeOffer()
-  //     // @ts-expect-error the error says tokenMintA, tokenProgram are missing, however they are created in the before hook
-  //     .accounts({ ...accounts })
-  //     .signers([bob])
-  //     .rpc();
-
-  //   await confirmTransaction(connection, transactionSignature);
-
-  //   // Check the offered tokens are now in Bob's account
-  //   // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
-  //   const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(accounts.takerTokenAccountA);
-  //   const bobTokenAccountBalanceAfter = new BN(bobTokenAccountBalanceAfterResponse.value.amount);
-  //   assert(bobTokenAccountBalanceAfter.eq(tokenAOfferedAmount));
-
-  //   // Check the wanted tokens are now in Alice's account
-  //   // (note: there is no before balance as Alice didn't have any wanted tokens before the transaction)
-  //   const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountB);
-  //   const aliceTokenAccountBalanceAfter = new BN(aliceTokenAccountBalanceAfterResponse.value.amount);
-  //   assert(aliceTokenAccountBalanceAfter.eq(tokenBWantedAmount));
-  // });
+    assert(aliceTokenAccountBalanceAfterResponse.amount === tokenBWantedAmount);
+  });
 
   // it("Returns tokens to Alice when she refunds her offer", async () => {
   //   // Create a new offer first
-  //   const offerId = getRandomBigNumber();
+  //   const newOfferId = getRandomBigInt();
 
-  //   const offer = PublicKey.findProgramAddressSync(
-  //     [Buffer.from("offer"), accounts.maker.toBuffer(), offerId.toArrayLike(Buffer, "le", 8)],
-  //     program.programId,
-  //   )[0];
+  //   const newOffer = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+  //     "offer",
+  //     alice.address,
+  //     newOfferId,
+  //   ]);
 
-  //   const vault = getAssociatedTokenAddressSync(accounts.tokenMintA, offer, true, TOKEN_PROGRAM);
+  //   const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
 
-  //   accounts.offer = offer;
-  //   accounts.vault = vault;
+  //   // aliceTokenAccountA
 
-  //   // Make the offer
-  //   let transactionSignature = await program.methods
-  //     .makeOffer(offerId, tokenAOfferedAmount, tokenBWantedAmount)
-  //     // @ts-expect-error the error says tokenMintA, tokenMintB, tokenProgram are missing, however they are created in the before hook
-  //     .accounts({ ...accounts })
-  //     .signers([alice])
-  //     .rpc();
+  //   // Make a new offer, using a new offerId and offer account
+  //   const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+  //     maker: alice,
+  //     tokenMintA,
+  //     tokenMintB,
+  //     makerTokenAccountA: aliceTokenAccountA,
+  //     offer: newOffer,
+  //     vault: newVault,
+  //     id: newOfferId,
+  //     tokenAOfferedAmount,
+  //     tokenBWantedAmount,
+  //     tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  //   });
 
-  //   await confirmTransaction(connection, transactionSignature);
+  //   const transactionSignature = await connection.sendTransactionFromInstructions({
+  //     feePayer: alice,
+  //     instructions: [makeOfferInstruction],
+  //   });
 
   //   // Get Alice's token balance before refund
-  //   const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountA);
-  //   const aliceTokenAccountBalanceBefore = new BN(aliceTokenAccountBalanceBeforeResponse.value.amount);
+  //   const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance(aliceTokenAccountA);
+  //   const aliceTokenAccountBalanceBefore = aliceTokenAccountBalanceBeforeResponse.amount;
 
   //   // Refund the offer
-  //   transactionSignature = await program.methods
-  //     .refundOffer()
-  //     .accounts({
-  //       // @ts-expect-error maker exists, the tests pass with it
-  //       maker: accounts.maker,
-  //       tokenMintA: accounts.tokenMintA,
-  //       makerTokenAccountA: accounts.makerTokenAccountA,
-  //       offer: accounts.offer,
-  //       vault: accounts.vault,
-  //       tokenProgram: accounts.tokenProgram,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+  //   const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
+  //     maker: alice,
+  //     tokenMintA,
+  //     makerTokenAccountA: aliceTokenAccountA,
+  //     offer: newOffer,
+  //     vault: newVault,
+  //     tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  //   });
 
-  //   await confirmTransaction(connection, transactionSignature);
+  //   const refundTransactionSignature = await connection.sendTransactionFromInstructions({
+  //     feePayer: alice,
+  //     instructions: [refundOfferInstruction],
+  //   });
 
   //   // Check tokens were returned to Alice
-  //   const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(accounts.makerTokenAccountA);
-  //   const aliceTokenAccountBalanceAfter = new BN(aliceTokenAccountBalanceAfterResponse.value.amount);
-  //   assert(aliceTokenAccountBalanceAfter.gt(aliceTokenAccountBalanceBefore));
+  //   const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(aliceTokenAccountA);
+  //   const aliceTokenAccountBalanceAfter: BigInt = aliceTokenAccountBalanceAfterResponse.amount;
+
+  //   // Assert the balance is greater than the before balance
+  //   assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
 
   //   // Verify vault is closed
   //   try {
-  //     await connection.getTokenAccountBalance(accounts.vault);
+  //     await connection.getTokenAccountBalance(newVault);
   //     assert(false, "Vault should be closed");
   //   } catch (thrownObject) {
   //     const error = thrownObject as Error;
-  //     assert(thrownObject.name === "TokenAccountNotFoundError");
+  //     assert(error.name === "TokenAccountNotFoundError");
   //   }
+  // });
 });

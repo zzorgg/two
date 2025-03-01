@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-escrow = "qbuMdeYxYJXBjU6C6qFKjZKjXmrU83eDQomHdrch826"
+escrow = "8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y"
 
 [registry]
 url = "https://api.apr.dev"
@@ -15,9 +15,4 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-# Silence:
-# "(node:23320) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead"
-# web3.js v1 requires whatwg-url which uses this old library
-# See https://stackoverflow.com/questions/68774489/punycode-is-deprecated-in-npm-what-should-i-replace-it-with
-# TODO: Remove this once web3.js v2 is used
 test = "npx tsx create-codama-client.ts; npx tsx --test --no-warnings tests/*.ts"
