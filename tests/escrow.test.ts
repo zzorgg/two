@@ -169,7 +169,6 @@ describe("Escrow", () => {
     // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
     const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(bob.address, tokenMintA, true);
 
-    // TODO: why is this any? Types aren't importing maybe?
     assert(bobTokenAccountBalanceAfterResponse.amount === tokenAOfferedAmount);
 
     // Check the wanted tokens are now in Alice's account
