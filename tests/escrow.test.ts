@@ -21,7 +21,7 @@ import {
 const ONE_SOL = lamports(1n * SOL);
 
 const getRandomBigInt = () => {
-  return BigInt(Math.floor(Math.random() * 1000000000000000000));
+  return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
 
 // See https://www.quicknode.com/guides/solana-development/tooling/web3-2/program-clients#generate-clients
@@ -55,14 +55,10 @@ describe("Escrow", () => {
   // Create Alice and Bob accounts, 2 token mints, and associated token accounts for both tokens for both users
   before(async () => {
     connection = await connect();
-    console.log(programClient);
 
     // This is the user that will pay for the transactions to create the token mints
-    log("Creating user, alice, and bob...");
     [user, alice, bob] = await connection.createWallets(3, { airdropAmount: ONE_SOL });
-    log("  ✅ User, alice, and bob created");
 
-    log("Creating token mints...");
     tokenMintA = await connection.createTokenMint({
       mintAuthority: user,
       decimals: 9,
@@ -87,20 +83,14 @@ describe("Escrow", () => {
       },
     });
 
-    log("  ✅ Token mints created");
-
     // Alice will have 1_000_000_000 of token A and 0 of token B
-    log("Minting tokens to Alice's account...");
     await connection.mintTokens(tokenMintA, user, 1_000_000_000n, alice.address);
-    log("  ✅ Tokens minted to Alice's account... ");
 
     // Get Alice's token A account
     aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
 
     // Bob will have 0 of token A and 1_000_000_000 of token B
-    log("Minting tokens to bob...");
     await connection.mintTokens(tokenMintB, user, 1_000_000_000n, bob.address);
-    log("  ✅ Tokens minted to bob");
   });
 
   test("Puts the tokens Alice offers into the vault when Alice makes an offer", async () => {
@@ -124,8 +114,6 @@ describe("Escrow", () => {
     // Derive the vault PDA (which will be an Associated Token Account)
     vault = await connection.getTokenAccountAddress(offer, tokenMintA, true);
 
-    log("Making offer instruction...");
-
     const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
       maker: alice,
       tokenMintA,
@@ -143,8 +131,6 @@ describe("Escrow", () => {
       feePayer: alice,
       instructions: [makeOfferInstruction],
     });
-
-    console.log("  ✅ Transaction signature:", transactionSignature);
   });
 
   it("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
@@ -169,7 +155,8 @@ describe("Escrow", () => {
     // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
     const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(bob.address, tokenMintA, true);
 
-    assert(bobTokenAccountBalanceAfterResponse.amount === tokenAOfferedAmount);
+    const bobTokenAccountBalanceAfter = BigInt(bobTokenAccountBalanceAfterResponse.amount);
+    assert(bobTokenAccountBalanceAfter === tokenAOfferedAmount);
 
     // Check the wanted tokens are now in Alice's account
     // (note: there is no before balance as Alice didn't have any wanted tokens before the transaction)
@@ -179,75 +166,74 @@ describe("Escrow", () => {
       true,
     );
 
-    assert(aliceTokenAccountBalanceAfterResponse.amount === tokenBWantedAmount);
+    const aliceTokenAccountBalanceAfter = BigInt(aliceTokenAccountBalanceAfterResponse.amount);
+    assert(aliceTokenAccountBalanceAfter === tokenBWantedAmount);
   });
 
   // it("Returns tokens to Alice when she refunds her offer", async () => {
-  //   // Create a new offer first
-  //   const newOfferId = getRandomBigInt();
-
-  //   const newOffer = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-  //     "offer",
-  //     alice.address,
-  //     newOfferId,
-  //   ]);
-
-  //   const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
-
-  //   // aliceTokenAccountA
-
-  //   // Make a new offer, using a new offerId and offer account
-  //   const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-  //     maker: alice,
-  //     tokenMintA,
-  //     tokenMintB,
-  //     makerTokenAccountA: aliceTokenAccountA,
-  //     offer: newOffer,
-  //     vault: newVault,
-  //     id: newOfferId,
-  //     tokenAOfferedAmount,
-  //     tokenBWantedAmount,
-  //     tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-  //   });
-
-  //   const transactionSignature = await connection.sendTransactionFromInstructions({
-  //     feePayer: alice,
-  //     instructions: [makeOfferInstruction],
-  //   });
-
-  //   // Get Alice's token balance before refund
-  //   const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance(aliceTokenAccountA);
-  //   const aliceTokenAccountBalanceBefore = aliceTokenAccountBalanceBeforeResponse.amount;
-
-  //   // Refund the offer
-  //   const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
-  //     maker: alice,
-  //     tokenMintA,
-  //     makerTokenAccountA: aliceTokenAccountA,
-  //     offer: newOffer,
-  //     vault: newVault,
-  //     tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-  //   });
-
-  //   const refundTransactionSignature = await connection.sendTransactionFromInstructions({
-  //     feePayer: alice,
-  //     instructions: [refundOfferInstruction],
-  //   });
-
-  //   // Check tokens were returned to Alice
-  //   const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(aliceTokenAccountA);
-  //   const aliceTokenAccountBalanceAfter: BigInt = aliceTokenAccountBalanceAfterResponse.amount;
-
-  //   // Assert the balance is greater than the before balance
-  //   assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
-
-  //   // Verify vault is closed
-  //   try {
-  //     await connection.getTokenAccountBalance(newVault);
-  //     assert(false, "Vault should be closed");
-  //   } catch (thrownObject) {
-  //     const error = thrownObject as Error;
-  //     assert(error.name === "TokenAccountNotFoundError");
-  //   }
+  // // We'll reuse the same token mints, but make a new offer and then refund it
+  // // Create a new offer
+  // const newOfferId = getRandomBigInt();
+  // const newOfferPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+  //   "offer",
+  //   alice.address,
+  //   newOfferId,
+  // ]);
+  // const newOffer = newOfferPDAAndBump.pda;
+  // const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
+  // // Make a new offer, using a new offerId and offer account
+  // const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+  //   maker: alice,
+  //   tokenMintA,
+  //   tokenMintB,
+  //   makerTokenAccountA: aliceTokenAccountA,
+  //   offer: newOffer,
+  //   vault: newVault,
+  //   id: newOfferId,
+  //   tokenAOfferedAmount,
+  //   tokenBWantedAmount,
+  //   tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  // });
+  // const transactionSignature = await connection.sendTransactionFromInstructions({
+  //   feePayer: alice,
+  //   instructions: [makeOfferInstruction],
+  // });
+  // // Get Alice's token balance before refund
+  // const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance(
+  //   alice.address,
+  //   tokenMintA,
+  //   true,
+  // );
+  // const aliceTokenAccountBalanceBefore = BigInt(aliceTokenAccountBalanceBeforeResponse.amount);
+  // // Refund the offer
+  // const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
+  //   maker: alice,
+  //   tokenMintA,
+  //   makerTokenAccountA: aliceTokenAccountA,
+  //   offer: newOffer,
+  //   vault: newVault,
+  //   tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  // });
+  // const refundTransactionSignature = await connection.sendTransactionFromInstructions({
+  //   feePayer: alice,
+  //   instructions: [refundOfferInstruction],
+  // });
+  // // Check tokens were returned to Alice
+  // const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance(
+  //   alice.address,
+  //   tokenMintA,
+  //   true,
+  // );
+  // const aliceTokenAccountBalanceAfter = BigInt(aliceTokenAccountBalanceAfterResponse.amount);
+  // // Assert the balance is greater than the before balance
+  // assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
+  // Verify vault is closed
+  // try {
+  //   await connection.getTokenAccountBalance(newVault, true);
+  //   assert(false, "Vault should be closed");
+  // } catch (thrownObject) {
+  //   const error = thrownObject as Error;
+  //   assert(error.name === "TokenAccountNotFoundError");
+  // }
   // });
 });
