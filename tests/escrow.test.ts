@@ -1,5 +1,5 @@
 import { before, describe, test, it } from "node:test";
-import { assert } from "node:console";
+import assert from "node:assert";
 import * as programClient from "../dist/js-client";
 import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, TOKEN_PROGRAM } from "@helius-dev/kite";
 
