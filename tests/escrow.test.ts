@@ -237,7 +237,6 @@ describe("Escrow", () => {
       instructions: [refundOfferInstruction],
     });
 
-    log("✅✅✅ Transaction signature:", refundTransactionSignature);
     // Check tokens were returned to Alice
     const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance({
       wallet: alice.address,
@@ -248,15 +247,15 @@ describe("Escrow", () => {
     // Assert the balance is greater than the before balance
     assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
     // Verify vault is closed
-    // try {
-    //   await connection.getTokenAccountBalance({
-    //     tokenAccount: newVault,
-    //     useTokenExtensions: true,
-    //   });
-    //   assert(false, "Vault should be closed");
-    // } catch (thrownObject) {
-    //   const error = thrownObject as Error;
-    //   assert(error.name === "TokenAccountNotFoundError");
-    // }
+    try {
+      await connection.getTokenAccountBalance({
+        tokenAccount: newVault,
+        useTokenExtensions: true,
+      });
+      assert(false, "Vault should be closed");
+    } catch (thrownObject) {
+      const error = thrownObject as Error;
+      assert(error.message.includes("Invalid param: could not find account"));
+    }
   });
 });
