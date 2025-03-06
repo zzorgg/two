@@ -1,10 +1,10 @@
-## 2025.1
+## 2.0.0
 
 - Added refund handler
 - Added Cursor AI config
-- Move to Codama and Kite for making TS clients
-  - `program.methods.doThing()` becomes `programClient.getDoThingInstruction()`
+- Move to `@solana/kit, Codama and Kite for making TS clients
   - `create-codama-client.ts` is used to produce a TypeScript client from the Anchor IDL.
+  - `program.methods.doThing()` becomes `programClient.getDoThingInstruction()`
 
 ## 2025
 
