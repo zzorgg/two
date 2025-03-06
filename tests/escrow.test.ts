@@ -5,8 +5,10 @@ import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, TOKEN_PROGRAM } fro
 
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 
-// For debugging. You could delete this, but then someone else will have to recreate it and then they'll be annoyed with you.
+// For debugging. You could delete these, but then someone else will have to recreate them and then they'll be annoyed with you.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const log = console.log;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const stringify = (obj: any) => JSON.stringify(obj, null, 2);
 
 import {
@@ -154,8 +156,6 @@ describe("Escrow", () => {
       instructions: [takeOfferInstruction],
     });
 
-    log("Transaction signature:", transactionSignature);
-
     // Check the offered tokens are now in Bob's account
     // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
     const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance({
@@ -192,8 +192,6 @@ describe("Escrow", () => {
     const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
 
     const aliceSolBalance = await connection.getLamportBalance(alice.address);
-
-    log("Alice's SOL balance:", aliceSolBalance);
 
     // Make a new offer, using a new offerId and offer account
 
