@@ -164,7 +164,7 @@ describe("Escrow", () => {
       useTokenExtensions: true,
     });
 
-    const bobTokenAccountBalanceAfter = BigInt(bobTokenAccountBalanceAfterResponse.amount);
+    const bobTokenAccountBalanceAfter = bobTokenAccountBalanceAfterResponse.amount;
     assert(bobTokenAccountBalanceAfter === tokenAOfferedAmount);
 
     // Check the wanted tokens are now in Alice's account
@@ -175,7 +175,7 @@ describe("Escrow", () => {
       useTokenExtensions: true,
     });
 
-    const aliceTokenAccountBalanceAfter = BigInt(aliceTokenAccountBalanceAfterResponse.amount);
+    const aliceTokenAccountBalanceAfter = aliceTokenAccountBalanceAfterResponse.amount;
     assert(aliceTokenAccountBalanceAfter === tokenBWantedAmount);
   });
 
