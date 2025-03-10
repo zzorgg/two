@@ -220,8 +220,6 @@ describe("Escrow", () => {
     });
     const aliceTokenAccountBalanceBefore = BigInt(aliceTokenAccountBalanceBeforeResponse.amount);
     // Refund the offer
-    // TODO: fails with
-    // Error [SolanaError]: custom program error: #1
     const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
       maker: alice,
       tokenMintA,
