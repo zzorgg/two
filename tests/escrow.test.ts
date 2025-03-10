@@ -218,7 +218,7 @@ describe("Escrow", () => {
       mint: tokenMintA,
       useTokenExtensions: true,
     });
-    const aliceTokenAccountBalanceBefore = BigInt(aliceTokenAccountBalanceBeforeResponse.amount);
+    const aliceTokenAccountBalanceBefore = aliceTokenAccountBalanceBeforeResponse.amount;
     // Refund the offer
     const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
       maker: alice,
@@ -239,7 +239,7 @@ describe("Escrow", () => {
       mint: tokenMintA,
       useTokenExtensions: true,
     });
-    const aliceTokenAccountBalanceAfter = BigInt(aliceTokenAccountBalanceAfterResponse.amount);
+    const aliceTokenAccountBalanceAfter = aliceTokenAccountBalanceAfterResponse.amount;
     // Assert the balance is greater than the before balance
     assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
     // Verify vault is closed
