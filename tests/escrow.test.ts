@@ -1,7 +1,7 @@
 import { before, describe, test, it } from "node:test";
 import assert from "node:assert";
 import * as programClient from "../dist/js-client";
-import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, TOKEN_PROGRAM } from "@helius-dev/kite";
+import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
 
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 
@@ -11,14 +11,7 @@ const log = console.log;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const stringify = (obj: any) => JSON.stringify(obj, null, 2);
 
-import {
-  lamports,
-  getProgramDerivedAddress,
-  getAddressEncoder,
-  address,
-  type KeyPairSigner,
-  type Address,
-} from "@solana/web3.js";
+import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 const ONE_SOL = lamports(1n * SOL);
 
@@ -138,7 +131,7 @@ describe("Escrow", () => {
     });
   });
 
-  it("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
+  test("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
     const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
       taker: bob,
       maker: alice.address,
@@ -179,7 +172,7 @@ describe("Escrow", () => {
     assert(aliceTokenAccountBalanceAfter === tokenBWantedAmount);
   });
 
-  it("Returns tokens to Alice when she refunds her offer", async () => {
+  test("Returns tokens to Alice when she refunds her offer", async () => {
     // We'll reuse the same token mints, but make a new offer and then refund it
     // Create a new offer
     const newOfferId = getRandomBigInt();
