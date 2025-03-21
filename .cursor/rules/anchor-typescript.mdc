@@ -1,7 +1,7 @@
 ---
 description: Anchor TypeScript
 globs: *.ts
-alwaysApply: true
+alwaysApply: false
 ---
 Create unit tests in TS in the `tests` directory. 
 
@@ -13,3 +13,5 @@ import assert from "node:assert";
 ```
 
 Use `test` rather than `it`.
+
+Use `catch (thrownObject)` and then `const error = thrownObject as Error;` - you can assume any item thrown is an Error.
