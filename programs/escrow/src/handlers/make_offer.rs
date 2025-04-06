@@ -5,9 +5,9 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{Offer, ANCHOR_DISCRIMINATOR};
+use crate::Offer;
 
-use super::transfer_tokens;
+use super::shared::transfer_tokens;
 
 // See https://www.anchor-lang.com/docs/account-constraints#instruction-attribute
 #[derive(Accounts)]
@@ -63,8 +63,9 @@ pub fn send_offered_tokens_to_vault(
         &context.accounts.vault,
         &token_a_offered_amount,
         &context.accounts.token_mint_a,
-        &context.accounts.maker,
+        &context.accounts.maker.to_account_info(),
         &context.accounts.token_program,
+        None,
     )
 }
 

@@ -10,7 +10,7 @@ use anchor_spl::{
 
 use crate::Offer;
 
-use super::transfer_tokens;
+use super::shared::transfer_tokens;
 
 #[derive(Accounts)]
 pub struct TakeOffer<'info> {
@@ -79,8 +79,9 @@ pub fn send_wanted_tokens_to_maker(ctx: &Context<TakeOffer>) -> Result<()> {
         &ctx.accounts.maker_token_account_b,
         &ctx.accounts.offer.token_b_wanted_amount,
         &ctx.accounts.token_mint_b,
-        &ctx.accounts.taker,
+        &ctx.accounts.taker.to_account_info(),
         &ctx.accounts.token_program,
+        None,
     )
 }
 
@@ -91,25 +92,16 @@ pub fn withdraw_and_close_vault(ctx: Context<TakeOffer>) -> Result<()> {
         &ctx.accounts.offer.id.to_le_bytes()[..],
         &[ctx.accounts.offer.bump],
     ];
-    let signer_seeds = [&seeds[..]];
+    let signer_seeds = &[&seeds[..]];
 
-    let accounts = TransferChecked {
-        from: ctx.accounts.vault.to_account_info(),
-        mint: ctx.accounts.token_mint_a.to_account_info(),
-        to: ctx.accounts.taker_token_account_a.to_account_info(),
-        authority: ctx.accounts.offer.to_account_info(),
-    };
-
-    let cpi_context = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        accounts,
-        &signer_seeds,
-    );
-
-    transfer_checked(
-        cpi_context,
-        ctx.accounts.vault.amount,
-        ctx.accounts.token_mint_a.decimals,
+    transfer_tokens(
+        &ctx.accounts.vault,
+        &ctx.accounts.taker_token_account_a,
+        &ctx.accounts.vault.amount,
+        &ctx.accounts.token_mint_a,
+        &ctx.accounts.offer.to_account_info(),
+        &ctx.accounts.token_program,
+        Some(signer_seeds),
     )?;
 
     let accounts = CloseAccount {
@@ -121,7 +113,7 @@ pub fn withdraw_and_close_vault(ctx: Context<TakeOffer>) -> Result<()> {
     let cpi_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
         accounts,
-        &signer_seeds,
+        signer_seeds,
     );
 
     close_account(cpi_context)

@@ -4,6 +4,7 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
+use super::shared::transfer_tokens;
 use crate::Offer;
 
 #[derive(Accounts)]
@@ -49,25 +50,16 @@ pub fn return_tokens_to_maker(context: &Context<RefundOffer>) -> Result<()> {
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];
-    let signer_seeds = [&seeds[..]];
+    let signer_seeds = &[&seeds[..]];
 
-    let transfer_accounts = TransferChecked {
-        from: context.accounts.vault.to_account_info(),
-        mint: context.accounts.token_mint_a.to_account_info(),
-        to: context.accounts.maker_token_account_a.to_account_info(),
-        authority: context.accounts.offer.to_account_info(),
-    };
-
-    let cpi_context = CpiContext::new_with_signer(
-        context.accounts.token_program.to_account_info(),
-        transfer_accounts,
-        &signer_seeds,
-    );
-
-    transfer_checked(
-        cpi_context,
-        context.accounts.vault.amount,
-        context.accounts.token_mint_a.decimals,
+    transfer_tokens(
+        &context.accounts.vault,
+        &context.accounts.maker_token_account_a,
+        &context.accounts.vault.amount,
+        &context.accounts.token_mint_a,
+        &context.accounts.offer.to_account_info(),
+        &context.accounts.token_program,
+        Some(signer_seeds),
     )
 }
 
