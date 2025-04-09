@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
-use super::shared::transfer_tokens;
+use super::shared::{close_token_account, transfer_tokens};
 use crate::Offer;
 
 #[derive(Accounts)]
@@ -44,13 +44,12 @@ pub struct RefundOffer<'info> {
 }
 
 pub fn return_tokens_to_maker(context: &Context<RefundOffer>) -> Result<()> {
-    let seeds = &[
+    let offer_account_seeds = &[
         b"offer",
         context.accounts.maker.to_account_info().key.as_ref(),
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];
-    let signer_seeds = &[&seeds[..]];
 
     transfer_tokens(
         &context.accounts.vault,
@@ -59,30 +58,23 @@ pub fn return_tokens_to_maker(context: &Context<RefundOffer>) -> Result<()> {
         &context.accounts.token_mint_a,
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
-        Some(signer_seeds),
+        Some(&offer_account_seeds[..]),
     )
 }
 
 pub fn close_vault(context: &Context<RefundOffer>) -> Result<()> {
-    let seeds = &[
+    let offer_account_seeds = &[
         b"offer",
         context.accounts.maker.to_account_info().key.as_ref(),
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];
-    let signer_seeds = [&seeds[..]];
 
-    let close_accounts = CloseAccount {
-        account: context.accounts.vault.to_account_info(),
-        destination: context.accounts.maker.to_account_info(),
-        authority: context.accounts.offer.to_account_info(),
-    };
-
-    let cpi_context = CpiContext::new_with_signer(
-        context.accounts.token_program.to_account_info(),
-        close_accounts,
-        &signer_seeds,
-    );
-
-    close_account(cpi_context)
+    close_token_account(
+        &context.accounts.vault,
+        &context.accounts.maker.to_account_info(),
+        &context.accounts.offer.to_account_info(),
+        &context.accounts.token_program,
+        Some(&offer_account_seeds[..]),
+    )
 }

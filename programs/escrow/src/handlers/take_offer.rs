@@ -2,15 +2,12 @@ use anchor_lang::prelude::*;
 
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{
-        close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface,
-        TransferChecked,
-    },
+    token_interface::{close_account, CloseAccount, Mint, TokenAccount, TokenInterface},
 };
 
 use crate::Offer;
 
-use super::shared::transfer_tokens;
+use super::shared::{close_token_account, transfer_tokens};
 
 #[derive(Accounts)]
 pub struct TakeOffer<'info> {
@@ -86,13 +83,13 @@ pub fn send_wanted_tokens_to_maker(ctx: &Context<TakeOffer>) -> Result<()> {
 }
 
 pub fn withdraw_and_close_vault(ctx: Context<TakeOffer>) -> Result<()> {
-    let seeds = &[
+    let offer_account_seeds = &[
         b"offer",
         ctx.accounts.maker.to_account_info().key.as_ref(),
         &ctx.accounts.offer.id.to_le_bytes()[..],
         &[ctx.accounts.offer.bump],
     ];
-    let signer_seeds = &[&seeds[..]];
+    let signers_seeds = Some(&offer_account_seeds[..]);
 
     transfer_tokens(
         &ctx.accounts.vault,
@@ -101,20 +98,14 @@ pub fn withdraw_and_close_vault(ctx: Context<TakeOffer>) -> Result<()> {
         &ctx.accounts.token_mint_a,
         &ctx.accounts.offer.to_account_info(),
         &ctx.accounts.token_program,
-        Some(signer_seeds),
+        signers_seeds,
     )?;
 
-    let accounts = CloseAccount {
-        account: ctx.accounts.vault.to_account_info(),
-        destination: ctx.accounts.taker.to_account_info(),
-        authority: ctx.accounts.offer.to_account_info(),
-    };
-
-    let cpi_context = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        accounts,
-        signer_seeds,
-    );
-
-    close_account(cpi_context)
+    close_token_account(
+        &ctx.accounts.vault,
+        &ctx.accounts.taker.to_account_info(),
+        &ctx.accounts.offer.to_account_info(),
+        &ctx.accounts.token_program,
+        signers_seeds,
+    )
 }
