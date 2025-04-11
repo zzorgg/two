@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::Offer;
+use crate::state::Offer;
 
 use super::shared::transfer_tokens;
 
@@ -53,11 +53,16 @@ pub struct MakeOffer<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// Move the tokens from the maker's ATA to the vault
-pub fn send_offered_tokens_to_vault(
-    context: &Context<MakeOffer>,
+// Handle the make offer instruction by:
+// 1. Moving the tokens from the maker's ATA to the vault
+// 2. Saving the details of the offer to the offer account
+pub fn make_offer(
+    context: Context<MakeOffer>,
+    id: u64,
     token_a_offered_amount: u64,
+    token_b_wanted_amount: u64,
 ) -> Result<()> {
+    // Move the tokens from the maker's ATA to the vault
     transfer_tokens(
         &context.accounts.maker_token_account_a,
         &context.accounts.vault,
@@ -66,11 +71,9 @@ pub fn send_offered_tokens_to_vault(
         &context.accounts.maker.to_account_info(),
         &context.accounts.token_program,
         None,
-    )
-}
+    )?;
 
-// Save the details of the offer to the offer account
-pub fn save_offer(context: Context<MakeOffer>, id: u64, token_b_wanted_amount: u64) -> Result<()> {
+    // Save the details of the offer to the offer account
     context.accounts.offer.set_inner(Offer {
         id,
         maker: context.accounts.maker.key(),

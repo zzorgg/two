@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{close_account, CloseAccount, Mint, TokenAccount, TokenInterface},
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::Offer;
+use crate::state::Offer;
 
 use super::shared::{close_token_account, transfer_tokens};
 
@@ -70,42 +70,45 @@ pub struct TakeOffer<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn send_wanted_tokens_to_maker(ctx: &Context<TakeOffer>) -> Result<()> {
+// Handle the take offer instruction by:
+// 1. Sending the wanted tokens from the taker to the maker
+// 2. Withdrawing the offered tokens from the vault to the taker and closing the vault
+pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
+    // Send the wanted tokens from the taker to the maker
     transfer_tokens(
-        &ctx.accounts.taker_token_account_b,
-        &ctx.accounts.maker_token_account_b,
-        &ctx.accounts.offer.token_b_wanted_amount,
-        &ctx.accounts.token_mint_b,
-        &ctx.accounts.taker.to_account_info(),
-        &ctx.accounts.token_program,
+        &context.accounts.taker_token_account_b,
+        &context.accounts.maker_token_account_b,
+        &context.accounts.offer.token_b_wanted_amount,
+        &context.accounts.token_mint_b,
+        &context.accounts.taker.to_account_info(),
+        &context.accounts.token_program,
         None,
-    )
-}
+    )?;
 
-pub fn withdraw_and_close_vault(ctx: Context<TakeOffer>) -> Result<()> {
     let offer_account_seeds = &[
         b"offer",
-        ctx.accounts.maker.to_account_info().key.as_ref(),
-        &ctx.accounts.offer.id.to_le_bytes()[..],
-        &[ctx.accounts.offer.bump],
+        context.accounts.maker.to_account_info().key.as_ref(),
+        &context.accounts.offer.id.to_le_bytes()[..],
+        &[context.accounts.offer.bump],
     ];
     let signers_seeds = Some(&offer_account_seeds[..]);
 
+    // Withdraw the offered tokens from the vault to the taker and close the vault
     transfer_tokens(
-        &ctx.accounts.vault,
-        &ctx.accounts.taker_token_account_a,
-        &ctx.accounts.vault.amount,
-        &ctx.accounts.token_mint_a,
-        &ctx.accounts.offer.to_account_info(),
-        &ctx.accounts.token_program,
+        &context.accounts.vault,
+        &context.accounts.taker_token_account_a,
+        &context.accounts.vault.amount,
+        &context.accounts.token_mint_a,
+        &context.accounts.offer.to_account_info(),
+        &context.accounts.token_program,
         signers_seeds,
     )?;
 
     close_token_account(
-        &ctx.accounts.vault,
-        &ctx.accounts.taker.to_account_info(),
-        &ctx.accounts.offer.to_account_info(),
-        &ctx.accounts.token_program,
+        &context.accounts.vault,
+        &context.accounts.taker.to_account_info(),
+        &context.accounts.offer.to_account_info(),
+        &context.accounts.token_program,
         signers_seeds,
     )
 }

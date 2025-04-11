@@ -1,11 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{
-    close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface,
-    TransferChecked,
-};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use super::shared::{close_token_account, transfer_tokens};
-use crate::Offer;
+use crate::state::Offer;
 
 #[derive(Accounts)]
 pub struct RefundOffer<'info> {
@@ -43,14 +40,19 @@ pub struct RefundOffer<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn return_tokens_to_maker(context: &Context<RefundOffer>) -> Result<()> {
+// Handle the refund offer instruction by:
+// 1. Returning the tokens from the vault to the maker's account
+// 2. Closing the vault and returning the rent to the maker
+pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
     let offer_account_seeds = &[
         b"offer",
         context.accounts.maker.to_account_info().key.as_ref(),
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];
+    let signers_seeds = Some(&offer_account_seeds[..]);
 
+    // Return the tokens from the vault to the maker's account
     transfer_tokens(
         &context.accounts.vault,
         &context.accounts.maker_token_account_a,
@@ -58,23 +60,15 @@ pub fn return_tokens_to_maker(context: &Context<RefundOffer>) -> Result<()> {
         &context.accounts.token_mint_a,
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
-        Some(&offer_account_seeds[..]),
-    )
-}
+        signers_seeds,
+    )?;
 
-pub fn close_vault(context: &Context<RefundOffer>) -> Result<()> {
-    let offer_account_seeds = &[
-        b"offer",
-        context.accounts.maker.to_account_info().key.as_ref(),
-        &context.accounts.offer.id.to_le_bytes()[..],
-        &[context.accounts.offer.bump],
-    ];
-
+    // Close the vault and return the rent to the maker
     close_token_account(
         &context.accounts.vault,
         &context.accounts.maker.to_account_info(),
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
-        Some(&offer_account_seeds[..]),
+        signers_seeds,
     )
 }
