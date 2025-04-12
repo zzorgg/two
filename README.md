@@ -2,8 +2,6 @@
 
 ## 🆕 Now updated for Solana kit, Kite, and Codama.
 
-![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
-
 It's often said that all other programs are modification of an Escrow app, so if you want an example of a Solana app that does something with actual value, here's the best place to start.
 
 Anchor Escrow 2025 has:
