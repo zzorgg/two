@@ -18,6 +18,9 @@ const loadJSON = async (...pathSegments: Array<string>) => {
 };
 
 // Instantiate Codama
+// @ts-expect-error Top level await actually works, but
+// changing tsconfig options seems to break other things (asking for file extensions, etc.)
+// TODO: fix this properly
 const idl = await loadJSON("target", "idl", "escrow.json");
 
 const codama = createFromRoot(rootNodeFromAnchor(idl));
