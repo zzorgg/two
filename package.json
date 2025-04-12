@@ -14,7 +14,7 @@
     "@types/node": "^22.13.5",
     "codama": "^1.2.8",
     "prettier": "^3.4.2",
-    "solana-kite": "^1.1.0",
+    "solana-kite": "^1.1.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   },
