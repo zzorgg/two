@@ -1,13 +1,10 @@
+use super::shared::transfer_tokens;
+use crate::state::Offer;
 use anchor_lang::prelude::*;
-
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
-
-use crate::state::Offer;
-
-use super::shared::transfer_tokens;
 
 // See https://www.anchor-lang.com/docs/account-constraints#instruction-attribute
 #[derive(Accounts)]
