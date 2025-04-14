@@ -52,7 +52,6 @@ jobs:
           echo "Creating a keypair..."
           solana-keygen new --no-bip39-passphrase -s -o deleteme.json
           echo SECRET_KEY="$(cat deleteme.json)"> .env
-          cat .env
           echo "----------------------------------------"
           echo "Installing packages..."
           npm i
