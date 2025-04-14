@@ -242,4 +242,43 @@ describe("Escrow", () => {
     });
     assert(isClosed);
   });
+
+  test("Fails when maker tries to make an offer with insufficient token balance", async () => {
+    const insufficientOfferId = getRandomBigInt();
+    const tooManyTokens = 1_000_000_000_000n; // Amount larger than what Alice has
+
+    // Derive the PDAs for this offer
+    const insufficientOfferPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+      "offer",
+      alice.address,
+      insufficientOfferId,
+    ]);
+    const insufficientOffer = insufficientOfferPDAAndBump.pda;
+    const insufficientVault = await connection.getTokenAccountAddress(insufficientOffer, tokenMintA, true);
+
+    // Create the instruction that should fail
+    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+      maker: alice,
+      tokenMintA,
+      tokenMintB,
+      makerTokenAccountA: aliceTokenAccountA,
+      offer: insufficientOffer,
+      vault: insufficientVault,
+      id: insufficientOfferId,
+      tokenAOfferedAmount: tooManyTokens,
+      tokenBWantedAmount,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    try {
+      await connection.sendTransactionFromInstructions({
+        feePayer: alice,
+        instructions: [makeOfferInstruction],
+      });
+    } catch (thrownObject) {
+      const error = thrownObject as Error;
+      assert(error.message.includes("custom program error: #1"));
+    }
+  });
+
 });
