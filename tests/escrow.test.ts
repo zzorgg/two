@@ -281,4 +281,62 @@ describe("Escrow", () => {
     }
   });
 
+  test("Fails when taker tries to take an offer without sufficient token balance", async () => {
+    // First, Alice needs to make a valid offer
+    const newOfferId = getRandomBigInt();
+    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+      "offer",
+      alice.address,
+      newOfferId,
+    ]);
+    const newOffer = offerPDAAndBump.pda;
+    const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
+
+    // Get Bob's token A account and Alice's token B account if they don't exist
+    const bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
+    const aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
+
+    // Alice makes a valid offer
+    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+      maker: alice,
+      tokenMintA,
+      tokenMintB,
+      makerTokenAccountA: aliceTokenAccountA,
+      offer: newOffer,
+      vault: newVault,
+      id: newOfferId,
+      tokenAOfferedAmount,
+      tokenBWantedAmount: 10_000_000_000n, // Requesting more tokens than Bob has
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    // Create Alice's offer
+    await connection.sendTransactionFromInstructions({
+      feePayer: alice,
+      instructions: [makeOfferInstruction],
+    });
+
+    // Now Bob tries to take the offer, but he doesn't have enough tokens
+    const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
+      taker: bob,
+      maker: alice.address,
+      tokenMintA,
+      tokenMintB,
+      takerTokenAccountA: bobTokenAccountA,
+      makerTokenAccountB: aliceTokenAccountB,
+      offer: newOffer,
+      vault: newVault,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    try {
+      await connection.sendTransactionFromInstructions({
+        feePayer: bob,
+        instructions: [takeOfferInstruction],
+      });
+    } catch (thrownObject) {
+      const error = thrownObject as Error;
+      assert(error.message.includes("custom program error: #1"));
+    }
+  });
 });
