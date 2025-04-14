@@ -19,8 +19,7 @@ jobs:
           solana-cli-version: "2.1.13"
           node-version: "22.11.0"
 
-      # Fix for
-      # https://github.com/solana-foundation/anchor/issues/3596
+      # Fix for https://github.com/solana-foundation/anchor/issues/3596
       # Causes 'Failed to get version of local binary: /opt/hostedtoolcache/node/22.11.0/x64/lib/node_modules/@coral-xyz/anchor-cli/anchor: 1: Syntax error: "(" unexpected'
       # TODO: Remove this once the issue is fixed
       - name: Manually download Anchor binary
