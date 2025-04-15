@@ -7,7 +7,7 @@ There is an Anchor project. It has a one or more programs in the `programs` dire
 
 Don't do things like write `...implement the thing...` or `...test code for creating an event...`. Instead, make the actual code.
 
-Remember this is Solana not Ethereum. Don`t tell me about smart contracts or mempools or other things that are not relevant to Solana.
+Remember this is Solana not Ethereum. Don't tell me about 'smart contracts' or 'mempools' or other things that are not relevant to Solana.
 
 
 
