@@ -339,4 +339,61 @@ describe("Escrow", () => {
       assert(error.message.includes("custom program error: #1"));
     }
   });
+
+  test("Fails when Bob tries to refund Alice's offer", async () => {
+    // Mint more tokens to Alice for this test
+
+    // First, Alice makes a valid offer that we'll try to refund
+    const newOfferId = getRandomBigInt();
+    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+      "offer",
+      alice.address,
+      newOfferId,
+    ]);
+    const newOffer = offerPDAAndBump.pda;
+    const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
+
+    // Alice makes the offer
+    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+      maker: alice,
+      tokenMintA,
+      tokenMintB,
+      makerTokenAccountA: aliceTokenAccountA,
+      offer: newOffer,
+      vault: newVault,
+      id: newOfferId,
+      tokenAOfferedAmount,
+      tokenBWantedAmount,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    await connection.sendTransactionFromInstructions({
+      feePayer: alice,
+      instructions: [makeOfferInstruction],
+    });
+
+    // Now Bob tries to refund the offer to his account
+    const bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
+    const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
+      maker: bob, // Bob tries to act as the maker
+      tokenMintA,
+      makerTokenAccountA: bobTokenAccountA, // Bob tries to refund to his account
+      offer: newOffer,
+      vault: newVault,
+      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    });
+
+    try {
+      await connection.sendTransactionFromInstructions({
+        feePayer: bob,
+        instructions: [refundOfferInstruction],
+      });
+    } catch (thrownObject) {
+      const error = thrownObject as Error;
+      assert(error.message.includes("custom program error: #2006"));
+      return;
+    }
+    // If we get here, the test failed because the transaction succeeded when it should have failed
+    assert.fail("Expected the refund to fail but it succeeded");
+  });
 });
