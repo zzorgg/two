@@ -81,7 +81,7 @@ describe("Escrow", () => {
     // Alice will have 2n * tokenAOfferedAmount of token A and 0 of token B
     // 2n * tokenAOfferedAmount because Alice will make two offers, and each offer will have tokenAOfferedAmount of token A
     // the first will be taken, and the second will be refunded.
-    await connection.mintTokens(tokenMintA, user, 2n * tokenAOfferedAmount, alice.address);
+    await connection.mintTokens(tokenMintA, user, 10n * tokenAOfferedAmount, alice.address);
 
     // Get Alice's token A account
     aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
