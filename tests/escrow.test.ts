@@ -15,9 +15,35 @@ import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 const ONE_SOL = lamports(1n * SOL);
 
+// SPL Token program errors
+// Reference: https://github.com/solana-program/token-2022/blob/main/program/src/error.rs#L11-L13
+enum SplTokenError {
+  InsufficientFunds = 1,
+}
+
+// Anchor framework errors (2000-2999 range)
+// Reference: https://github.com/coral-xyz/anchor/blob/master/lang/src/error.rs#L72-L74
+enum AnchorError {
+  ConstraintSeeds = 2006,
+}
+
+// Known program IDs
+const TOKEN_PROGRAM_IDS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address, TOKEN_EXTENSIONS_PROGRAM];
+const ANCHOR_PROGRAM_ID = "AnchorProg1111111111111111111111111111111111" as Address;
+
 const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
+
+// Helper function to check for specific program errors
+// Note: Solana errors do not include the program ID in the error object, so we can only check the error code in the message.
+function assertProgramError(error: Error, expectedCode: SplTokenError | AnchorError) {
+  // Only check the error code in the message
+  assert(
+    error.message.includes(`custom program error: #${expectedCode}`),
+    `Expected error code ${expectedCode} but got: ${error.message}`,
+  );
+}
 
 // Helper function to create a test offer
 async function createTestOffer(params: {
@@ -157,7 +183,7 @@ describe("Escrow", () => {
         assert.fail("Expected the offer creation to fail but it succeeded");
       } catch (thrownObject) {
         const error = thrownObject as Error;
-        assert(error.message.includes("custom program error: #1"));
+        assertProgramError(error, SplTokenError.InsufficientFunds);
       }
     });
   });
@@ -245,7 +271,7 @@ describe("Escrow", () => {
         assert.fail("Expected the take offer to fail but it succeeded");
       } catch (thrownObject) {
         const error = thrownObject as Error;
-        assert(error.message.includes("custom program error: #1"));
+        assertProgramError(error, SplTokenError.InsufficientFunds);
       }
     });
   });
@@ -333,7 +359,7 @@ describe("Escrow", () => {
         assert.fail("Expected the refund to fail but it succeeded");
       } catch (thrownObject) {
         const error = thrownObject as Error;
-        assert(error.message.includes("custom program error: #2006"));
+        assertProgramError(error, AnchorError.ConstraintSeeds);
       }
     });
   });
