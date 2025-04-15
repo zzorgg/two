@@ -9,7 +9,7 @@ const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const log = console.log;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const stringify = (obj: any) => JSON.stringify(obj, null, 2);
+const stringify = (object: any) => JSON.stringify(object, null, 2);
 
 import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
