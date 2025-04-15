@@ -19,39 +19,73 @@ const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
 
-// See https://www.quicknode.com/guides/solana-development/tooling/web3-2/program-clients#generate-clients
+// Helper function to create a test offer
+async function createTestOffer(params: {
+  connection: Connection;
+  maker: KeyPairSigner;
+  tokenMintA: Address;
+  tokenMintB: Address;
+  makerTokenAccountA: Address;
+  tokenAOfferedAmount: bigint;
+  tokenBWantedAmount: bigint;
+  offerId?: bigint;
+}) {
+  const {
+    connection,
+    maker,
+    tokenMintA,
+    tokenMintB,
+    makerTokenAccountA,
+    tokenAOfferedAmount,
+    tokenBWantedAmount,
+    offerId = getRandomBigInt(),
+  } = params;
+
+  const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
+    "offer",
+    maker.address,
+    offerId,
+  ]);
+  const offer = offerPDAAndBump.pda;
+  const vault = await connection.getTokenAccountAddress(offer, tokenMintA, true);
+
+  const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
+    maker,
+    tokenMintA,
+    tokenMintB,
+    makerTokenAccountA,
+    offer,
+    vault,
+    id: offerId,
+    tokenAOfferedAmount,
+    tokenBWantedAmount,
+    tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  });
+
+  await connection.sendTransactionFromInstructions({
+    feePayer: maker,
+    instructions: [makeOfferInstruction],
+  });
+
+  return { offer, vault, offerId };
+}
+
 describe("Escrow", () => {
   let connection: Connection;
   let user: KeyPairSigner;
-
-  // Alice will be the maker (creator) of the offer
   let alice: KeyPairSigner;
-
-  // Bob will be the taker (acceptor) of the offer
   let bob: KeyPairSigner;
-
-  // tokenMintA represents the token Alice is offering
-  // tokenMintB represents the token Alice wants in return
   let tokenMintA: Address;
   let tokenMintB: Address;
-
-  let vault: Address;
-  let offer: Address;
-
-  let offerId: bigint;
-
   let aliceTokenAccountA: Address;
   let bobTokenAccountA: Address;
   let aliceTokenAccountB: Address;
 
-  let tokenAOfferedAmount = 1_000_000_000n;
-  let tokenBWantedAmount = 1_000_000_000n;
+  const tokenAOfferedAmount = 1_000_000_000n;
+  const tokenBWantedAmount = 1_000_000_000n;
 
-  // Create Alice and Bob accounts, 2 token mints, and associated token accounts for both tokens for both users
   before(async () => {
     connection = await connect();
-
-    // This is the user that will pay for the transactions to create the token mints
     [user, alice, bob] = await connection.createWallets(3, { airdropAmount: ONE_SOL });
 
     tokenMintA = await connection.createTokenMint({
@@ -78,322 +112,229 @@ describe("Escrow", () => {
       },
     });
 
-    // Alice will have 2n * tokenAOfferedAmount of token A and 0 of token B
-    // 2n * tokenAOfferedAmount because Alice will make two offers, and each offer will have tokenAOfferedAmount of token A
-    // the first will be taken, and the second will be refunded.
     await connection.mintTokens(tokenMintA, user, 10n * tokenAOfferedAmount, alice.address);
-
-    // Get Alice's token A account
     aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
-
-    // Bob will have 0 of token A and 1_000_000_000 of token B
-    // he will use the Token B to take Alice's offer.
     await connection.mintTokens(tokenMintB, user, 1_000_000_000n, bob.address);
-  });
 
-  test("Puts the tokens Alice offers into the vault when Alice makes an offer", async () => {
-    offerId = getRandomBigInt();
-
-    // Get Bob's token A account (which may not exist yet)
     bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
-
-    // Get Alice's token B account (which may not exist yet)
     aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
+  });
 
-    // Derive the offer PDA
-    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-      "offer",
-      alice.address,
-      offerId,
-    ]);
+  describe("makeOffer", () => {
+    test("successfully creates an offer with valid inputs", async () => {
+      const { offer, vault } = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount,
+      });
 
-    offer = offerPDAAndBump.pda;
-
-    // Derive the vault PDA (which will be an Associated Token Account)
-    vault = await connection.getTokenAccountAddress(offer, tokenMintA, true);
-
-    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      tokenMintB,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer,
-      vault,
-      id: offerId,
-      tokenAOfferedAmount,
-      tokenBWantedAmount,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      // Verify the offer was created successfully by checking the vault balance
+      const vaultBalanceResponse = await connection.getTokenAccountBalance({
+        tokenAccount: vault,
+        mint: tokenMintA,
+        useTokenExtensions: true,
+      });
+      assert(vaultBalanceResponse.amount === tokenAOfferedAmount);
     });
 
-    const transactionSignature = await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [makeOfferInstruction],
+    test("fails when maker has insufficient token balance", async () => {
+      const tooManyTokens = 1_000_000_000_000n;
+
+      try {
+        await createTestOffer({
+          connection,
+          maker: alice,
+          tokenMintA,
+          tokenMintB,
+          makerTokenAccountA: aliceTokenAccountA,
+          tokenAOfferedAmount: tooManyTokens,
+          tokenBWantedAmount,
+        });
+        assert.fail("Expected the offer creation to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as Error;
+        assert(error.message.includes("custom program error: #1"));
+      }
     });
   });
 
-  test("Puts the tokens from the vault into Bob's account, and gives Alice Bob's tokens, when Bob takes an offer", async () => {
-    const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
-      taker: bob,
-      maker: alice.address,
-      tokenMintA,
-      tokenMintB,
-      takerTokenAccountA: bobTokenAccountA,
-      makerTokenAccountB: aliceTokenAccountB,
-      offer: offer,
-      vault: vault,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+  describe("takeOffer", () => {
+    let testOffer: Address;
+    let testVault: Address;
+
+    before(async () => {
+      const result = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount,
+      });
+      testOffer = result.offer;
+      testVault = result.vault;
     });
 
-    const transactionSignature = await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [takeOfferInstruction],
-    });
+    test("successfully takes an offer", async () => {
+      const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
+        taker: bob,
+        maker: alice.address,
+        tokenMintA,
+        tokenMintB,
+        takerTokenAccountA: bobTokenAccountA,
+        makerTokenAccountB: aliceTokenAccountB,
+        offer: testOffer,
+        vault: testVault,
+        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      });
 
-    // Check the offered tokens are now in Bob's account
-    // (note: there is no before balance as Bob didn't have any offered tokens before the transaction)
-    const bobTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance({
-      tokenAccount: bobTokenAccountA,
-      mint: tokenMintA,
-      useTokenExtensions: true,
-    });
-
-    const bobTokenAccountBalanceAfter = bobTokenAccountBalanceAfterResponse.amount;
-    assert(bobTokenAccountBalanceAfter === tokenAOfferedAmount);
-
-    // Check the wanted tokens are now in Alice's account
-    // (note: there is no before balance as Alice didn't have any wanted tokens before the transaction)
-    const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance({
-      tokenAccount: aliceTokenAccountB,
-      mint: tokenMintB,
-      useTokenExtensions: true,
-    });
-
-    const aliceTokenAccountBalanceAfter = aliceTokenAccountBalanceAfterResponse.amount;
-    assert(aliceTokenAccountBalanceAfter === tokenBWantedAmount);
-  });
-
-  test("Returns tokens to Alice when she refunds her offer", async () => {
-    // We'll reuse the same token mints, but make a new offer and then refund it
-    // Create a new offer
-    const newOfferId = getRandomBigInt();
-    const newOfferPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-      "offer",
-      alice.address,
-      newOfferId,
-    ]);
-    const newOffer = newOfferPDAAndBump.pda;
-    const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
-
-    const aliceSolBalance = await connection.getLamportBalance(alice.address);
-
-    // Make a new offer, using a new offerId and offer account
-
-    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      tokenMintB,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer: newOffer,
-      vault: newVault,
-      id: newOfferId,
-      tokenAOfferedAmount,
-      tokenBWantedAmount,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
-    const transactionSignature = await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [makeOfferInstruction],
-    });
-
-    // Get Alice's token balance before refund
-    const aliceTokenAccountBalanceBeforeResponse = await connection.getTokenAccountBalance({
-      tokenAccount: aliceTokenAccountA,
-      mint: tokenMintA,
-      useTokenExtensions: true,
-    });
-    const aliceTokenAccountBalanceBefore = aliceTokenAccountBalanceBeforeResponse.amount;
-    // Refund the offer
-    const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer: newOffer,
-      vault: newVault,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
-    const refundTransactionSignature = await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [refundOfferInstruction],
-    });
-
-    // Check tokens were returned to Alice
-    const aliceTokenAccountBalanceAfterResponse = await connection.getTokenAccountBalance({
-      wallet: alice.address,
-      mint: tokenMintA,
-      useTokenExtensions: true,
-    });
-    const aliceTokenAccountBalanceAfter = aliceTokenAccountBalanceAfterResponse.amount;
-    // Assert the balance is greater than the before balance
-    assert(aliceTokenAccountBalanceAfter > aliceTokenAccountBalanceBefore);
-    // Verify vault is closed
-    const isClosed = await connection.checkTokenAccountIsClosed({
-      tokenAccount: newVault,
-      useTokenExtensions: true,
-    });
-    assert(isClosed);
-  });
-
-  test("Fails when maker tries to make an offer with insufficient token balance", async () => {
-    const insufficientOfferId = getRandomBigInt();
-    const tooManyTokens = 1_000_000_000_000n; // Amount larger than what Alice has
-
-    // Derive the PDAs for this offer
-    const insufficientOfferPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-      "offer",
-      alice.address,
-      insufficientOfferId,
-    ]);
-    const insufficientOffer = insufficientOfferPDAAndBump.pda;
-    const insufficientVault = await connection.getTokenAccountAddress(insufficientOffer, tokenMintA, true);
-
-    // Create the instruction that should fail
-    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      tokenMintB,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer: insufficientOffer,
-      vault: insufficientVault,
-      id: insufficientOfferId,
-      tokenAOfferedAmount: tooManyTokens,
-      tokenBWantedAmount,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
-
-    try {
       await connection.sendTransactionFromInstructions({
         feePayer: alice,
-        instructions: [makeOfferInstruction],
-      });
-    } catch (thrownObject) {
-      const error = thrownObject as Error;
-      assert(error.message.includes("custom program error: #1"));
-    }
-  });
-
-  test("Fails when taker tries to take an offer without sufficient token balance", async () => {
-    // First, Alice needs to make a valid offer
-    const newOfferId = getRandomBigInt();
-    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-      "offer",
-      alice.address,
-      newOfferId,
-    ]);
-    const newOffer = offerPDAAndBump.pda;
-    const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
-
-    // Get Bob's token A account and Alice's token B account if they don't exist
-    const bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
-    const aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
-
-    // Alice makes a valid offer
-    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      tokenMintB,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer: newOffer,
-      vault: newVault,
-      id: newOfferId,
-      tokenAOfferedAmount,
-      tokenBWantedAmount: 10_000_000_000n, // Requesting more tokens than Bob has
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
-
-    // Create Alice's offer
-    await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [makeOfferInstruction],
-    });
-
-    // Now Bob tries to take the offer, but he doesn't have enough tokens
-    const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
-      taker: bob,
-      maker: alice.address,
-      tokenMintA,
-      tokenMintB,
-      takerTokenAccountA: bobTokenAccountA,
-      makerTokenAccountB: aliceTokenAccountB,
-      offer: newOffer,
-      vault: newVault,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
-
-    try {
-      await connection.sendTransactionFromInstructions({
-        feePayer: bob,
         instructions: [takeOfferInstruction],
       });
-    } catch (thrownObject) {
-      const error = thrownObject as Error;
-      assert(error.message.includes("custom program error: #1"));
-    }
+
+      // Verify token transfers
+      const bobTokenABalance = await connection.getTokenAccountBalance({
+        tokenAccount: bobTokenAccountA,
+        mint: tokenMintA,
+        useTokenExtensions: true,
+      });
+      assert(bobTokenABalance.amount === tokenAOfferedAmount);
+
+      const aliceTokenBBalance = await connection.getTokenAccountBalance({
+        tokenAccount: aliceTokenAccountB,
+        mint: tokenMintB,
+        useTokenExtensions: true,
+      });
+      assert(aliceTokenBBalance.amount === tokenBWantedAmount);
+    });
+
+    test("fails when taker has insufficient token balance", async () => {
+      const { offer, vault } = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount: 10_000_000_000n,
+      });
+
+      const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
+        taker: bob,
+        maker: alice.address,
+        tokenMintA,
+        tokenMintB,
+        takerTokenAccountA: bobTokenAccountA,
+        makerTokenAccountB: aliceTokenAccountB,
+        offer,
+        vault,
+        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      });
+
+      try {
+        await connection.sendTransactionFromInstructions({
+          feePayer: bob,
+          instructions: [takeOfferInstruction],
+        });
+        assert.fail("Expected the take offer to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as Error;
+        assert(error.message.includes("custom program error: #1"));
+      }
+    });
   });
 
-  test("Fails when Bob tries to refund Alice's offer", async () => {
-    // Mint more tokens to Alice for this test
+  describe("refundOffer", () => {
+    let testOffer: Address;
+    let testVault: Address;
 
-    // First, Alice makes a valid offer that we'll try to refund
-    const newOfferId = getRandomBigInt();
-    const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-      "offer",
-      alice.address,
-      newOfferId,
-    ]);
-    const newOffer = offerPDAAndBump.pda;
-    const newVault = await connection.getTokenAccountAddress(newOffer, tokenMintA, true);
-
-    // Alice makes the offer
-    const makeOfferInstruction = await programClient.getMakeOfferInstructionAsync({
-      maker: alice,
-      tokenMintA,
-      tokenMintB,
-      makerTokenAccountA: aliceTokenAccountA,
-      offer: newOffer,
-      vault: newVault,
-      id: newOfferId,
-      tokenAOfferedAmount,
-      tokenBWantedAmount,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+    before(async () => {
+      const result = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount,
+      });
+      testOffer = result.offer;
+      testVault = result.vault;
     });
 
-    await connection.sendTransactionFromInstructions({
-      feePayer: alice,
-      instructions: [makeOfferInstruction],
-    });
+    test("successfully refunds an offer to the maker", async () => {
+      const aliceBalanceBefore = await connection.getTokenAccountBalance({
+        tokenAccount: aliceTokenAccountA,
+        mint: tokenMintA,
+        useTokenExtensions: true,
+      });
 
-    // Now Bob tries to refund the offer to his account
-    const bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
-    const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
-      maker: bob, // Bob tries to act as the maker
-      tokenMintA,
-      makerTokenAccountA: bobTokenAccountA, // Bob tries to refund to his account
-      offer: newOffer,
-      vault: newVault,
-      tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-    });
+      const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
+        maker: alice,
+        tokenMintA,
+        makerTokenAccountA: aliceTokenAccountA,
+        offer: testOffer,
+        vault: testVault,
+        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      });
 
-    try {
       await connection.sendTransactionFromInstructions({
-        feePayer: bob,
+        feePayer: alice,
         instructions: [refundOfferInstruction],
       });
-    } catch (thrownObject) {
-      const error = thrownObject as Error;
-      assert(error.message.includes("custom program error: #2006"));
-      return;
-    }
-    // If we get here, the test failed because the transaction succeeded when it should have failed
-    assert.fail("Expected the refund to fail but it succeeded");
+
+      // Verify refund
+      const aliceBalanceAfter = await connection.getTokenAccountBalance({
+        tokenAccount: aliceTokenAccountA,
+        mint: tokenMintA,
+        useTokenExtensions: true,
+      });
+      assert(aliceBalanceAfter.amount > aliceBalanceBefore.amount);
+
+      // Verify vault is closed
+      const isClosed = await connection.checkTokenAccountIsClosed({
+        tokenAccount: testVault,
+        useTokenExtensions: true,
+      });
+      assert(isClosed);
+    });
+
+    test("fails when non-maker tries to refund the offer", async () => {
+      const { offer, vault } = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount,
+      });
+
+      const refundOfferInstruction = await programClient.getRefundOfferInstructionAsync({
+        maker: bob,
+        tokenMintA,
+        makerTokenAccountA: bobTokenAccountA,
+        offer,
+        vault,
+        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      });
+
+      try {
+        await connection.sendTransactionFromInstructions({
+          feePayer: bob,
+          instructions: [refundOfferInstruction],
+        });
+        assert.fail("Expected the refund to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as Error;
+        assert(error.message.includes("custom program error: #2006"));
+      }
+    });
   });
 });
