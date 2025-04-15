@@ -93,7 +93,7 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
     ];
     let signers_seeds = Some(&offer_account_seeds[..]);
 
-    // Withdraw the offered tokens from the vault to the taker and close the vault
+    // Withdraw the offered tokens from the vault to the taker
     transfer_tokens(
         &context.accounts.vault,
         &context.accounts.taker_token_account_a,
@@ -104,6 +104,7 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         signers_seeds,
     )?;
 
+    // Close the vault and return the rent to the maker
     close_token_account(
         &context.accounts.vault,
         &context.accounts.taker.to_account_info(),
