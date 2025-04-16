@@ -12,7 +12,7 @@
 - Clean builds with zero warnings or errors for a smooth, distraction-free experience.
 - Testing via npm and Node.js, avoiding third-party package managers or test runners.
 
-**Must-watch**: Check out the [full animated explanation of the program from the Solana TURBIN3 channel on YouTube](https://www.youtube.com/watch?v=ZMB_OqLIeGw&t=1s) to understand how it works in action.
+[![Full animated explanation of the Escrow program from mySolana TURBIN3 video](https://img.youtube.com/vi/ZMB_OqLIeGw/maxresdefault.jpg)](https://www.youtube.com/watch?v=ZMB_OqLIeGw)
 
 This repository is [designed for teaching and learning](CHANGELOG.md).
 
