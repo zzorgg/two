@@ -8,11 +8,13 @@ It's often said that all other programs are modification of an Escrow app, so if
 
 Anchor Escrow 2025 has:
 
-- CI, on latest Rust, Agave CLI, node.js and Anchor
+- Always tested on latest Rust, Agave CLI, node.js, Anchor, and Solana Kit.
 - Zero warnings, zero errors. So that you can see if things work or not without a screen full of unrelated junk.
 - npm and node.js used for tests, no third-party package managers or test runners.
 
-In addition, the repo is [designed for teaching and learning](CHANGELOG.md).
+Check out the [full animated explanation from the TURBIN3 channel on YouTube](https://github.com/mikemaccana/professional-education) repo which has an [animated explanation](https://www.youtube.com/watch?v=ZMB_OqLIeGw&t=1s) of the program.
+
+This repo is [designed for teaching and learning](CHANGELOG.md).
 
 ## Introduction
 
@@ -28,10 +30,6 @@ Without our program, users would have to either:
 Our Escrow program is designed to provide a secure environment for users to swap a specific amount of one token with a specific amount of another token without having to trust each other.
 
 Better yet, since our program allows Alice and Bob to transact directly with each other, they both get a hundred percent of the token they desire!
-
-## Want a better explanation?
-
-Check out the [Solana Professional Education](https://github.com/mikemaccana/professional-education) repo which has an [animated explanation](https://github.com/mikemaccana/professional-education/blob/main/presentations/Solana%20Professional%20Education.key) of the
 
 ## Versions
 
