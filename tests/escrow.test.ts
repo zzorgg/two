@@ -3,8 +3,6 @@ import assert from "node:assert";
 import * as programClient from "../dist/js-client";
 import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
 
-const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
-
 // For debugging. You could delete these, but then someone else will have to recreate them and then they'll be annoyed with you.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const log = console.log;
@@ -26,10 +24,6 @@ enum SplTokenError {
 enum AnchorError {
   ConstraintSeeds = 2006,
 }
-
-// Known program IDs
-const TOKEN_PROGRAM_IDS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address, TOKEN_EXTENSIONS_PROGRAM];
-const ANCHOR_PROGRAM_ID = "AnchorProg1111111111111111111111111111111111" as Address;
 
 const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
