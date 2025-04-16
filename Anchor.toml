@@ -15,4 +15,4 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "npx tsx create-codama-client.ts; npx tsx --test --no-warnings tests/*.ts"
+test = "npx tsx create-codama-client.ts; npx tsx --test --test-reporter=spec --no-warnings tests/*.ts"
