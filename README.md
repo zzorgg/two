@@ -42,10 +42,10 @@ echo "Solana CLI: $(solana -V)\nAnchor: $(anchor --version)\nNode: $(node --vers
 This repository was tested with:
 
 ```
-Solana CLI: solana-cli 2.1.13 (src:67412607; feat:1725507508, client:Agave)
+Solana CLI: solana-cli 2.1.0 (src:c1080de4; feat:3176011155, client:Agave)
 Anchor: anchor-cli 0.31.0
 Node: v22.11.0
-Rust: rustc 1.84.0-nightly (03ee48451 2024-11-18)
+Rust: rustc 1.82.0 (f6e511eec 2024-10-15)
 ```
 
 Using different versions may cause compatibility issues.
