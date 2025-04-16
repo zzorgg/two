@@ -1,45 +1,41 @@
 # Anchor Escrow 2025
 
-## 🆕 Now updated for Solana kit, Kite, and Codama.
+## 🆕 Updated for Solana Kit, Kite, and Codama
 
 ![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)
 
-It's often said that all other programs are modification of an Escrow app, so if you want an example of a Solana app that does something with actual value, here's the best place to start.
+**Start here for your first real Solana program.** As the saying goes, "All Solana programs are variations of an escrow." This makes **Anchor Escrow 2025** the perfect starting point for anyone diving into Solana development with a practical, real-world application.
 
-Anchor Escrow 2025 has:
+**Anchor Escrow 2025** provides:
 
-- Always tested on latest Rust, Agave CLI, node.js, Anchor, and Solana Kit.
-- Zero warnings, zero errors. So that you can see if things work or not without a screen full of unrelated junk.
-- npm and node.js used for tests, no third-party package managers or test runners.
+- Full compatibility with the latest Rust, Agave CLI, Node.js, Anchor, and Solana Kit.
+- Clean builds with zero warnings or errors for a smooth, distraction-free experience.
+- Testing via npm and Node.js, avoiding third-party package managers or test runners.
 
-Check out the [full animated explanation from the TURBIN3 channel on YouTube](https://github.com/mikemaccana/professional-education) repo which has an [animated explanation](https://www.youtube.com/watch?v=ZMB_OqLIeGw&t=1s) of the program.
+**Must-watch**: Check out the [full animated explanation of the program from the Solana TURBIN3 channel on YouTube](https://www.youtube.com/watch?v=ZMB_OqLIeGw&t=1s) to understand how it works in action.
 
-This repo is [designed for teaching and learning](CHANGELOG.md).
+This repository is [designed for teaching and learning](CHANGELOG.md).
 
 ## Introduction
 
-This Solana program is called an **_escrow_** - it allows a user to swap a specific amount of one token for a desired amount of another token.
+This Solana program implements an **escrow**, enabling secure token swaps between users. For example, Alice can offer 10 USDC in exchange for 100 WIF.
 
-For example, Alice is offering 10 USDC, and wants 100 WIF in return.
+Without an escrow, users face significant risks:
 
-Without our program, users would have to either:
+- **Traditional finance** charges 1-6% in fees, eating into your funds.
+- **Manual swaps** are prone to fraud. If Bob takes Alice's 10 USDC but doesn't send the 100 WIF, or if Alice fails to deliver after receiving Bob's tokens, someone gets burned.
 
-- Use traditional finance, where a third party would take between 1-6% of the value of the transaction.
-- Engage in manual token swapping. Imagine the potential problems if Bob promised to send Alice 100 WIF, but instead took the 10 USDC and ran? Or what if Alice was dishonest, received the 10 USDC from Bob, and decided not to send the 100 WIF? Our Escrow program handles these complexities by acting a trusted entity that will only release tokens to both parties at the right time.
-
-Our Escrow program is designed to provide a secure environment for users to swap a specific amount of one token with a specific amount of another token without having to trust each other.
-
-Better yet, since our program allows Alice and Bob to transact directly with each other, they both get a hundred percent of the token they desire!
+The **Anchor Escrow 2025** program acts as a trusted intermediary, releasing tokens only when both parties meet the agreed terms. This ensures Alice and Bob each receive 100% of their desired tokens, securely and without middleman fees.
 
 ## Versions
 
-You can check the versions on your own machine with:
+Verify your local environment with:
 
 ```bash
 echo "Solana CLI: $(solana -V)\nAnchor: $(anchor --version)\nNode: $(node --version)\nRust: $(rustc -V)"
 ```
 
-This repo was tested with:
+This repository was tested with:
 
 ```
 Solana CLI: solana-cli 2.1.13 (src:67412607; feat:1725507508, client:Agave)
@@ -48,12 +44,34 @@ Node: v22.11.0
 Rust: rustc 1.84.0-nightly (03ee48451 2024-11-18)
 ```
 
-If you use other versions, you should be aware that things may not work.
+Using different versions may cause compatibility issues.
 
 ## Usage
 
-Then `anchor test`, `anchor deploy` etc.
+1. Clone the repository:
 
-## Changelog and credits
+   ```bash
+   git clone https://github.com/mikemaccana/anchor-escrow-2025.git
+   cd anchor-escrow-2025
+   ```
 
-This project has a [CHANGELOG](CHANGELOG.md). Go read it.
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Run tests:
+
+   ```bash
+   anchor test
+   ```
+
+4. Deploy the program:
+   ```bash
+   anchor deploy
+   ```
+
+## Changelog and Credits
+
+See the [CHANGELOG](CHANGELOG.md) for updates and contributor credits.
