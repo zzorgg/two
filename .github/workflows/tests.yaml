@@ -36,9 +36,10 @@ jobs:
       # Fixes:
       #   Error: Unable to read keypair file
       # during 'anchor test'
+      # Hide the output of the command to avoid cluttering the logs
       - name: Make a default keypair
         run: |
-          solana-keygen new --no-bip39-passphrase
+          solana-keygen new --no-bip39-passphrase &> /dev/null
 
       # RUSTUP_TOOLCHAIN is needed for consistent builds per
       # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
