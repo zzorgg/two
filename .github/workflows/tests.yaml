@@ -16,7 +16,7 @@ jobs:
       - uses: metaDAOproject/setup-anchor@v3.1
         with:
           anchor-version: "0.31.1"
-          solana-cli-version: "2.1.13"
+          solana-cli-version: "2.1.21"
           node-version: "22.11.0"
 
       # Fix for https://github.com/solana-foundation/anchor/issues/3596
