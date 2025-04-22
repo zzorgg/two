@@ -17,7 +17,7 @@ jobs:
         with:
           anchor-version: "0.31.1"
           solana-cli-version: "2.1.21"
-          node-version: "22.11.0"
+          node-version: "22.14.0"
 
       # Fix for https://github.com/solana-foundation/anchor/issues/3596
       # TODO: Remove this once the issue is fixed
