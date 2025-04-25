@@ -40,6 +40,9 @@ jobs:
         run: |
           solana-keygen new --no-bip39-passphrase
 
+      # RUSTUP_TOOLCHAIN is needed for consistent builds per
+      # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
+      # TODO: remove when no longer necessary
       - name: Test the project builds and tests pass
         run: |
           echo "----------------------------------------"
@@ -54,6 +57,7 @@ jobs:
           npm i
           echo "----------------------------------------"
           echo "Running 'anchor test'..."
+          export RUSTUP_TOOLCHAIN='nightly-2025-04-16'
           anchor test 2>&1 | tee -a build.log
           echo "----------------------------------------"
           echo "build.log..."

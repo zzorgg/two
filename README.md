@@ -68,7 +68,10 @@ Using different versions may cause compatibility issues.
 3. Run tests:
 
    ```bash
-   anchor test
+   # RUSTUP_TOOLCHAIN is needed for consistent builds per
+   # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
+   # TODO: remove when no longer necessary
+   RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor test
    ```
 
 4. Deploy the program:
