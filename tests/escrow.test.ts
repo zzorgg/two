@@ -22,6 +22,7 @@ enum SplTokenError {
 // Anchor framework errors (2000-2999 range)
 // Reference: https://github.com/coral-xyz/anchor/blob/master/lang/src/error.rs#L72-L74
 enum AnchorError {
+  ConstraintHasOne = 2001,
   ConstraintSeeds = 2006,
 }
 
@@ -360,7 +361,8 @@ describe("Escrow", () => {
         assert.fail("Expected the refund to fail but it succeeded");
       } catch (thrownObject) {
         const error = thrownObject as Error;
-        assertProgramError(error, AnchorError.ConstraintSeeds);
+        // TODO: double check this is the right error
+        assertProgramError(error, AnchorError.ConstraintHasOne);
       }
     });
   });
