@@ -23,7 +23,7 @@ pub struct RefundOffer<'info> {
         mut,
         close = maker,
         has_one = maker,
-        seeds = [b"offer", maker.key().as_ref(), offer.id.to_le_bytes().as_ref()],
+        seeds = [b"offer", offer.id.to_le_bytes().as_ref()],
         bump = offer.bump
     )]
     pub offer: Account<'info, Offer>,
@@ -46,7 +46,6 @@ pub struct RefundOffer<'info> {
 pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
     let offer_account_seeds = &[
         b"offer",
-        context.accounts.maker.to_account_info().key.as_ref(),
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];

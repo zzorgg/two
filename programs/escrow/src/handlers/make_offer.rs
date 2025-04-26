@@ -31,7 +31,7 @@ pub struct MakeOffer<'info> {
         init,
         payer = maker,
         space = Offer::DISCRIMINATOR.len() + Offer::INIT_SPACE,
-        seeds = [b"offer", maker.key().as_ref(), id.to_le_bytes().as_ref()],
+        seeds = [b"offer", id.to_le_bytes().as_ref()],
         bump
     )]
     pub offer: Account<'info, Offer>,

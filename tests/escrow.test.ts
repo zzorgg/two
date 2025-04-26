@@ -61,11 +61,7 @@ async function createTestOffer(params: {
     offerId = getRandomBigInt(),
   } = params;
 
-  const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, [
-    "offer",
-    maker.address,
-    offerId,
-  ]);
+  const offerPDAAndBump = await connection.getPDAAndBump(programClient.ESCROW_PROGRAM_ADDRESS, ["offer", offerId]);
   const offer = offerPDAAndBump.pda;
   const vault = await connection.getTokenAccountAddress(offer, tokenMintA, true);
 

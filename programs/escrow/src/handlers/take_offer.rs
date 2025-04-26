@@ -52,7 +52,7 @@ pub struct TakeOffer<'info> {
         close = maker,
         has_one = maker,
         has_one = token_mint_b,
-        seeds = [b"offer", maker.key().as_ref(), offer.id.to_le_bytes().as_ref()],
+        seeds = [b"offer", offer.id.to_le_bytes().as_ref()],
         bump = offer.bump
     )]
     offer: Account<'info, Offer>,
@@ -87,7 +87,6 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
 
     let offer_account_seeds = &[
         b"offer",
-        context.accounts.maker.to_account_info().key.as_ref(),
         &context.accounts.offer.id.to_le_bytes()[..],
         &[context.accounts.offer.bump],
     ];
