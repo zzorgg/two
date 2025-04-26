@@ -47,22 +47,32 @@ jobs:
         run: |
           solana-keygen new --no-bip39-passphrase &> /dev/null
 
-      - name: Test the project builds and tests pass
+      - name: Show versions
         run: |
           echo "----------------------------------------"
           echo "Showing versions..."
           npm run show-versions
-          echo "----------------------------------------"
-          echo "Creating a keypair..."
-          solana-keygen new --no-bip39-passphrase -s -o deleteme.json
-          echo SECRET_KEY="$(cat deleteme.json)"> .env
+
+      - name: Install packages
+        run: |
           echo "----------------------------------------"
           echo "Installing packages..."
           npm i
+
+      - name: Build the project
+        run: |
+          echo "----------------------------------------"
+          echo "Running 'anchor build'..."
+          anchor build 2>&1 | tee -a build.log
+
+      - name: Run the tests
+        run: |
           echo "----------------------------------------"
           echo "Running 'anchor test'..."
-          export RUSTUP_TOOLCHAIN='nightly-2025-04-16'
           anchor test 2>&1 | tee -a build.log
+
+      - name: Check for any errors or warnings
+        run: |
           echo "----------------------------------------"
           echo "build.log..."
           cat build.log
