@@ -88,12 +88,12 @@ async function createTestOffer(params: {
     tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
   });
 
-  await connection.sendTransactionFromInstructions({
+  const signature = await connection.sendTransactionFromInstructions({
     feePayer: maker,
     instructions: [makeOfferInstruction],
   });
 
-  return { offer, vault, offerId };
+  return { offer, vault, offerId, signature };
 }
 
 describe("Escrow", () => {
@@ -112,6 +112,14 @@ describe("Escrow", () => {
   // Both tokens have 9 decimals, so we can use this to convert between major and minor units
   const TOKEN = 10n ** BigInt(tokenDecimals);
 
+  // Alice is going to make a few offers in these tests, so we give her 10 tokens
+  const aliceInitialTokenAAmount = 10n * TOKEN;
+  // We have a test later where Bob tries to reuse Alice's offer ID, so we give him a tiny amount (1 minor unit) of token A
+  const bobInitialTokenAAmount = 1n;
+  // Bob has 1 token of token B he will offer in exchange
+  const bobInitialTokenBAmount = 1n * TOKEN;
+
+  // Alice will offer 1 token of token A in exchange for 1 token of token B
   const tokenAOfferedAmount = 1n * TOKEN;
   const tokenBWantedAmount = 1n * TOKEN;
 
@@ -147,11 +155,11 @@ describe("Escrow", () => {
     });
 
     // Mint tokens to alice and bob
-    // Alice is going to make a few offers in these tests, so we give her 10 tokens
-    await connection.mintTokens(tokenMintA, user, 10n * TOKEN, alice.address);
-    // Bob has 1 token of token B he will offer in exchange
-    await connection.mintTokens(tokenMintB, user, 1n * TOKEN, bob.address);
+    await connection.mintTokens(tokenMintA, user, aliceInitialTokenAAmount, alice.address);
+    await connection.mintTokens(tokenMintA, user, bobInitialTokenAAmount, bob.address);
+    await connection.mintTokens(tokenMintB, user, bobInitialTokenBAmount, bob.address);
 
+    // Get the token accounts for alice and bob
     aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
     bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
     aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
@@ -176,6 +184,43 @@ describe("Escrow", () => {
         useTokenExtensions: true,
       });
       assert(vaultBalanceResponse.amount === tokenAOfferedAmount);
+    });
+
+    test("fails when trying to reuse an existing offer ID", async () => {
+      // First, create an offer with Alice using a specific offer ID
+      const offerId = getRandomBigInt();
+      await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount,
+        offerId,
+      });
+
+      // Now try to create another offer with Bob using the same offer ID
+
+      // Create bobTokenAccountA if it doesn't exist
+      bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
+
+      let x: { offer: Address; vault: Address; offerId: bigint; signature: string };
+      try {
+        x = await createTestOffer({
+          connection,
+          maker: bob,
+          tokenMintA,
+          tokenMintB,
+          makerTokenAccountA: bobTokenAccountA,
+          tokenAOfferedAmount: bobInitialTokenAAmount,
+          tokenBWantedAmount,
+          offerId, // Reusing the same offer ID
+        });
+      } catch (thrownObject) {
+        const error = thrownObject as Error;
+        assertProgramError(error, SystemError.AlreadyInUse);
+      }
     });
 
     test("fails when maker has insufficient token balance", async () => {
@@ -241,7 +286,7 @@ describe("Escrow", () => {
         mint: tokenMintA,
         useTokenExtensions: true,
       });
-      assert(bobTokenABalance.amount === tokenAOfferedAmount);
+      assert(bobTokenABalance.amount === bobInitialTokenAAmount + tokenAOfferedAmount);
 
       const aliceTokenBBalance = await connection.getTokenAccountBalance({
         tokenAccount: aliceTokenAccountB,
