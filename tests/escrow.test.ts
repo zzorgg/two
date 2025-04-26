@@ -173,7 +173,7 @@ describe("Escrow", () => {
     });
 
     test("fails when maker has insufficient token balance", async () => {
-      const tooManyTokens = 1_000_000_000_000n;
+      const tooManyTokens = 1_000n * TOKEN;
 
       try {
         await createTestOffer({
