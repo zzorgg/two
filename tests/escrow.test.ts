@@ -101,16 +101,24 @@ describe("Escrow", () => {
   let bobTokenAccountA: Address;
   let aliceTokenAccountB: Address;
 
-  const tokenAOfferedAmount = 1_000_000_000n;
-  const tokenBWantedAmount = 1_000_000_000n;
+  const tokenDecimals = 9;
+
+  // Both tokens have 9 decimals, so we can use this to convert between major and minor units
+  const TOKEN = 10n ** BigInt(tokenDecimals);
+
+  const tokenAOfferedAmount = 1n * TOKEN;
+  const tokenBWantedAmount = 1n * TOKEN;
 
   before(async () => {
     connection = await connect();
+
+    // 'user' will be the account we use to create the token mints
     [user, alice, bob] = await connection.createWallets(3, { airdropAmount: ONE_SOL });
 
+    // Create two token mints - the factories that create token A, and token B
     tokenMintA = await connection.createTokenMint({
       mintAuthority: user,
-      decimals: 9,
+      decimals: tokenDecimals,
       name: "Token A",
       symbol: "TOKEN_A",
       uri: "https://example.com/token-a",
@@ -122,7 +130,7 @@ describe("Escrow", () => {
 
     tokenMintB = await connection.createTokenMint({
       mintAuthority: user,
-      decimals: 9,
+      decimals: tokenDecimals,
       name: "Token B",
       symbol: "TOKEN_B",
       uri: "https://example.com/token-b",
@@ -132,10 +140,13 @@ describe("Escrow", () => {
       },
     });
 
-    await connection.mintTokens(tokenMintA, user, 10n * tokenAOfferedAmount, alice.address);
-    aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
-    await connection.mintTokens(tokenMintB, user, 1_000_000_000n, bob.address);
+    // Mint tokens to alice and bob
+    // Alice is going to make a few offers in these tests, so we give her 10 tokens
+    await connection.mintTokens(tokenMintA, user, 10n * TOKEN, alice.address);
+    // Bob has 1 token of token B he will offer in exchange
+    await connection.mintTokens(tokenMintB, user, 1n * TOKEN, bob.address);
 
+    aliceTokenAccountA = await connection.getTokenAccountAddress(alice.address, tokenMintA, true);
     bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
     aliceTokenAccountB = await connection.getTokenAccountAddress(alice.address, tokenMintB, true);
   });
