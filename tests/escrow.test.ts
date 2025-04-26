@@ -13,6 +13,13 @@ import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 const ONE_SOL = lamports(1n * SOL);
 
+// System program errors
+// Reference: https://github.com/solana-labs/solana/blob/master/sdk/program/src/system_instruction.rs#L59
+enum SystemError {
+  // Account already in use
+  AlreadyInUse = 0,
+}
+
 // SPL Token program errors
 // Reference: https://github.com/solana-program/token-2022/blob/main/program/src/error.rs#L11-L13
 enum SplTokenError {
@@ -24,6 +31,8 @@ enum SplTokenError {
 enum AnchorError {
   ConstraintHasOne = 2001,
   ConstraintSeeds = 2006,
+  AccountAlreadyInitialized = 2001,
+  AccountNotInitialized = 3012,
 }
 
 const getRandomBigInt = () => {
@@ -32,7 +41,7 @@ const getRandomBigInt = () => {
 
 // Helper function to check for specific program errors
 // Note: Solana errors do not include the program ID in the error object, so we can only check the error code in the message.
-function assertProgramError(error: Error, expectedCode: SplTokenError | AnchorError) {
+function assertProgramError(error: Error, expectedCode: SystemError | SplTokenError | AnchorError) {
   // Only check the error code in the message
   assert(
     error.message.includes(`custom program error: #${expectedCode}`),
