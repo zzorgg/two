@@ -11,6 +11,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # RUSTUP_TOOLCHAIN is needed for consistent builds per
+    # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
+    # TODO: remove when no longer necessary
+    env:
+      RUSTUP_TOOLCHAIN: "nightly-2025-04-16"
+
     steps:
       - uses: actions/checkout@v4
       - uses: metaDAOproject/setup-anchor@v3.1
@@ -41,9 +47,6 @@ jobs:
         run: |
           solana-keygen new --no-bip39-passphrase &> /dev/null
 
-      # RUSTUP_TOOLCHAIN is needed for consistent builds per
-      # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
-      # TODO: remove when no longer necessary
       - name: Test the project builds and tests pass
         run: |
           echo "----------------------------------------"
