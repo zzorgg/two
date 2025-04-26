@@ -25,6 +25,14 @@ jobs:
           solana-cli-version: "2.1.21"
           node-version: "22.14.0"
 
+      # Pre-install the Rust toolchain to avoid installation messages during version checks
+      # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
+      # TODO: remove when no longer necessary
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install $RUSTUP_TOOLCHAIN
+          rustup component add --toolchain $RUSTUP_TOOLCHAIN cargo clippy rust-docs rust-std rustc rustfmt
+
       # Fix for https://github.com/solana-foundation/anchor/issues/3596
       # TODO: Remove this once the issue is fixed
       - name: Manually download Anchor binary
