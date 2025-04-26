@@ -25,6 +25,14 @@ jobs:
           solana-cli-version: "2.1.21"
           node-version: "22.14.0"
 
+      # Fix for https://github.com/solana-foundation/anchor/issues/3596
+      # TODO: Remove this once the issue is fixed
+      - name: Manually download Anchor binary
+        run: |
+          wget https://github.com/coral-xyz/anchor/releases/download/v0.31.1/anchor-0.31.1-x86_64-unknown-linux-gnu
+          chmod +x anchor-0.31.1-x86_64-unknown-linux-gnu
+          mv anchor-0.31.1-x86_64-unknown-linux-gnu `which anchor`
+
       # git will keep outputting:
       #   hint: Using 'master' as the name for the initial branch. This default branch name
       #   hint: is subject to change.
