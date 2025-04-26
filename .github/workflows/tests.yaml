@@ -41,6 +41,14 @@ jobs:
           chmod +x anchor-0.31.1-x86_64-unknown-linux-gnu
           mv anchor-0.31.1-x86_64-unknown-linux-gnu `which anchor`
 
+      # Pre-download Cargo dependencies to avoid messages during version checks
+      - name: Pre-download dependencies
+        run: |
+          echo "----------------------------------------"
+          echo "Pre-downloading Cargo dependencies..."
+          cargo fetch
+          cargo build-sbf --version &> /dev/null || true
+
       # git will keep outputting:
       #   hint: Using 'master' as the name for the initial branch. This default branch name
       #   hint: is subject to change.
