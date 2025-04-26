@@ -28,7 +28,7 @@ pub struct TakeOffer<'info> {
         associated_token::authority = taker,
         associated_token::token_program = token_program,
     )]
-    pub taker_token_account_a: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub taker_token_account_a: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -36,7 +36,7 @@ pub struct TakeOffer<'info> {
         associated_token::authority = taker,
         associated_token::token_program = token_program,
     )]
-    pub taker_token_account_b: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub taker_token_account_b: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
@@ -45,7 +45,7 @@ pub struct TakeOffer<'info> {
         associated_token::authority = maker,
         associated_token::token_program = token_program,
     )]
-    pub maker_token_account_b: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub maker_token_account_b: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -55,7 +55,7 @@ pub struct TakeOffer<'info> {
         seeds = [b"offer", maker.key().as_ref(), offer.id.to_le_bytes().as_ref()],
         bump = offer.bump
     )]
-    offer: Box<Account<'info, Offer>>,
+    offer: Account<'info, Offer>,
 
     #[account(
         mut,
@@ -63,7 +63,7 @@ pub struct TakeOffer<'info> {
         associated_token::authority = offer,
         associated_token::token_program = token_program,
     )]
-    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
