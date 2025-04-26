@@ -25,6 +25,23 @@ jobs:
           solana-cli-version: "2.1.21"
           node-version: "22.14.0"
 
+      # Fix for https://github.com/solana-foundation/anchor/issues/3596
+      # TODO: Remove this once the issue is fixed
+      - name: Manually download Anchor binary
+        run: |
+          echo "Checking local 'anchor' directory"
+          ls -la anchor
+          echo "Running npm i -g @coral-xyz/anchor-cli@0.31.2"
+          npm i -g @coral-xyz/anchor-cli@0.31.2
+          echo "Running npm config get prefix"
+          npm config get prefix
+          echo "Running echo $PATH"
+          echo $PATH
+          echo "Running anchor --version"
+          /opt/hostedtoolcache/node/22.14.0/x64/bin/anchor --version
+          echo "Running which anchor"
+          which anchor
+
       # git will keep outputting:
       #   hint: Using 'master' as the name for the initial branch. This default branch name
       #   hint: is subject to change.
@@ -52,12 +69,6 @@ jobs:
           echo "----------------------------------------"
           echo "Installing packages..."
           npm i
-
-      # Fix for https://github.com/solana-foundation/anchor/issues/3596
-      # TODO: Remove this once the issue is fixed
-      - name: Manually download Anchor binary
-        run: |
-          npm i -g @coral-xyz/anchor-cli@0.31.2
 
       - name: Build the project
         run: |
