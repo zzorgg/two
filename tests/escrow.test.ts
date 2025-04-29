@@ -7,7 +7,10 @@ import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM } from "solana-kite"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const log = console.log;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const stringify = (object: any) => JSON.stringify(object, null, 2);
+const stringify = (object: any) => {
+  const bigIntReplacer = (key: string, value: any) => (typeof value === "bigint" ? value.toString() : value);
+  return JSON.stringify(object, bigIntReplacer, 2);
+};
 
 import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
