@@ -1,7 +1,7 @@
 import { before, describe, test, it } from "node:test";
 import assert from "node:assert";
 import * as programClient from "../dist/js-client";
-import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
+import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, ErrorWithTransaction } from "solana-kite";
 
 // For debugging. You could delete these, but then someone else will have to recreate them and then they'll be annoyed with you.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -16,41 +16,14 @@ import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 const ONE_SOL = lamports(1n * SOL);
 
-// System program errors
-// Reference: https://github.com/solana-labs/solana/blob/master/sdk/program/src/system_instruction.rs#L59
-enum SystemError {
-  // Account already in use
-  AlreadyInUse = 0,
-}
-
-// SPL Token program errors
-// Reference: https://github.com/solana-program/token-2022/blob/main/program/src/error.rs#L11-L13
-enum SplTokenError {
-  InsufficientFunds = 1,
-}
-
-// Anchor framework errors (2000-2999 range)
-// Reference: https://github.com/coral-xyz/anchor/blob/master/lang/src/error.rs#L72-L74
-enum AnchorError {
-  ConstraintHasOne = 2001,
-  ConstraintSeeds = 2006,
-  AccountAlreadyInitialized = 2001,
-  AccountNotInitialized = 3012,
-}
-
 const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
 
-// Helper function to check for specific program errors
-// Note: Solana errors do not include the program ID in the error object, so we can only check the error code in the message.
-function assertProgramError(error: Error, expectedCode: SystemError | SplTokenError | AnchorError) {
-  // Only check the error code in the message
-  assert(
-    error.message.includes(`custom program error: #${expectedCode}`),
-    `Expected error code ${expectedCode} but got: ${error.message}`,
-  );
-}
+const INSUFFICIENT_FUNDS_ERROR = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb.TransferChecked: insufficient funds";
+const REFUND_OFFER_ERROR =
+  "8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y.RefundOffer: A has one constraint was violated";
+const ACCOUNT_IN_USE_ERROR = "11111111111111111111111111111111.Allocate: account already in use";
 
 // Helper function to create a test offer
 async function createTestOffer(params: {
@@ -186,7 +159,7 @@ describe("Escrow", () => {
         mint: tokenMintA,
         useTokenExtensions: true,
       });
-      assert(vaultBalanceResponse.amount === tokenAOfferedAmount);
+      assert.equal(vaultBalanceResponse.amount, tokenAOfferedAmount, "Vault balance should match offered amount");
     });
 
     test("fails when trying to reuse an existing offer ID", async () => {
@@ -221,8 +194,8 @@ describe("Escrow", () => {
           offerId, // Reusing the same offer ID
         });
       } catch (thrownObject) {
-        const error = thrownObject as Error;
-        assertProgramError(error, SystemError.AlreadyInUse);
+        const error = thrownObject as ErrorWithTransaction;
+        assert.equal(error.message, ACCOUNT_IN_USE_ERROR);
       }
     });
 
@@ -241,8 +214,11 @@ describe("Escrow", () => {
         });
         assert.fail("Expected the offer creation to fail but it succeeded");
       } catch (thrownObject) {
-        const error = thrownObject as Error;
-        assertProgramError(error, SplTokenError.InsufficientFunds);
+        const error = thrownObject as ErrorWithTransaction;
+        assert(
+          error.message === INSUFFICIENT_FUNDS_ERROR,
+          `Expected "${INSUFFICIENT_FUNDS_ERROR}" but got: ${error.message}`,
+        );
       }
     });
   });
@@ -289,14 +265,18 @@ describe("Escrow", () => {
         mint: tokenMintA,
         useTokenExtensions: true,
       });
-      assert(bobTokenABalance.amount === bobInitialTokenAAmount + tokenAOfferedAmount);
+      assert.equal(
+        bobTokenABalance.amount,
+        bobInitialTokenAAmount + tokenAOfferedAmount,
+        "Bob's token A balance should be initial + offered amount",
+      );
 
       const aliceTokenBBalance = await connection.getTokenAccountBalance({
         tokenAccount: aliceTokenAccountB,
         mint: tokenMintB,
         useTokenExtensions: true,
       });
-      assert(aliceTokenBBalance.amount === tokenBWantedAmount);
+      assert.equal(aliceTokenBBalance.amount, tokenBWantedAmount, "Alice's token B balance should match wanted amount");
     });
 
     test("fails when taker has insufficient token balance", async () => {
@@ -329,8 +309,8 @@ describe("Escrow", () => {
         });
         assert.fail("Expected the take offer to fail but it succeeded");
       } catch (thrownObject) {
-        const error = thrownObject as Error;
-        assertProgramError(error, SplTokenError.InsufficientFunds);
+        const error = thrownObject as ErrorWithTransaction;
+        assert.equal(error.message, INSUFFICIENT_FUNDS_ERROR, `Expected insufficient funds error`);
       }
     });
   });
@@ -380,14 +360,17 @@ describe("Escrow", () => {
         mint: tokenMintA,
         useTokenExtensions: true,
       });
-      assert(aliceBalanceAfter.amount > aliceBalanceBefore.amount);
+      assert.ok(
+        aliceBalanceAfter.amount > aliceBalanceBefore.amount,
+        "Balance after refund should be greater than before",
+      );
 
       // Verify vault is closed
       const isClosed = await connection.checkTokenAccountIsClosed({
         tokenAccount: testVault,
         useTokenExtensions: true,
       });
-      assert(isClosed);
+      assert.ok(isClosed, "Vault should be closed");
     });
 
     test("fails when non-maker tries to refund the offer", async () => {
@@ -417,9 +400,8 @@ describe("Escrow", () => {
         });
         assert.fail("Expected the refund to fail but it succeeded");
       } catch (thrownObject) {
-        const error = thrownObject as Error;
-        // TODO: double check this is the right error
-        assertProgramError(error, AnchorError.ConstraintHasOne);
+        const error = thrownObject as ErrorWithTransaction;
+        assert.equal(error.message, REFUND_OFFER_ERROR, "Expected refund offer error");
       }
     });
   });
