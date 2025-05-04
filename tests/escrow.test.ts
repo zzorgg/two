@@ -2,6 +2,7 @@ import { before, describe, test, it } from "node:test";
 import assert from "node:assert";
 import * as programClient from "../dist/js-client";
 import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, ErrorWithTransaction } from "solana-kite";
+import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 // For debugging. You could delete these, but then someone else will have to recreate them and then they'll be annoyed with you.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -11,8 +12,6 @@ const stringify = (object: any) => {
   const bigIntReplacer = (key: string, value: any) => (typeof value === "bigint" ? value.toString() : value);
   return JSON.stringify(object, bigIntReplacer, 2);
 };
-
-import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 
 const ONE_SOL = lamports(1n * SOL);
 
@@ -181,9 +180,9 @@ describe("Escrow", () => {
       // Create bobTokenAccountA if it doesn't exist
       bobTokenAccountA = await connection.getTokenAccountAddress(bob.address, tokenMintA, true);
 
-      let x: { offer: Address; vault: Address; offerId: bigint; signature: string };
+      let testOffer: { offer: Address; vault: Address; offerId: bigint; signature: string };
       try {
-        x = await createTestOffer({
+        testOffer = await createTestOffer({
           connection,
           maker: bob,
           tokenMintA,
