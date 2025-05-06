@@ -1,5 +1,12 @@
 import { Connection } from "solana-kite";
-import { lamports, type KeyPairSigner, type Address, decodeAccount } from "@solana/kit";
+import {
+  lamports,
+  type KeyPairSigner,
+  type Address,
+  decodeAccount,
+  EncodedAccount,
+  MaybeEncodedAccount,
+} from "@solana/kit";
 import * as programClient from "../dist/js-client";
 import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
 import bs58 from "bs58";
@@ -18,15 +25,29 @@ export const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
 
+interface ProgramAccountWithBase64Encoding {
+  pubkey: Address;
+  account: {
+    data: [string, "base64"];
+    executable: boolean;
+    lamports: number;
+    owner: Address;
+    rentEpoch: number;
+    space: number;
+  };
+}
+
 // getProgramAccounts uses one format
 // decodeOffer uses another
-export function getProgramAccountsResultToEncodedAccount(result: any) {
+export function getProgramAccountsResultToEncodedAccount(
+  result: ProgramAccountWithBase64Encoding,
+): MaybeEncodedAccount {
   // Decode base64 data to Buffer
   const base64String = result.account.data[0];
   const bytes = Buffer.from(base64String, "base64");
   return {
     executable: result.account.executable,
-    lamports: BigInt(result.account.lamports),
+    lamports: lamports(BigInt(result.account.lamports)),
     programAddress: address(programClient.ESCROW_PROGRAM_ADDRESS),
     space: BigInt(result.account.space),
     address: address(result.pubkey),
@@ -84,7 +105,7 @@ export async function createTestOffer(params: {
 
 export const getOffers = async (connection: Connection) => {
   // See https://solana.com/docs/rpc/http/getprogramaccounts
-  const getProgramAccountsResults = await connection.rpc
+  const getProgramAccountsResults: Array<ProgramAccountWithBase64Encoding> = await connection.rpc
     .getProgramAccounts(programClient.ESCROW_PROGRAM_ADDRESS, {
       encoding: "base64",
       filters: [
@@ -98,7 +119,7 @@ export const getOffers = async (connection: Connection) => {
     })
     .send();
 
-  const encodedAccounts = getProgramAccountsResults.map((result: any) =>
+  const encodedAccounts: Array<MaybeEncodedAccount> = getProgramAccountsResults.map((result: any) =>
     getProgramAccountsResultToEncodedAccount(result),
   );
   const decodedAccounts = encodedAccounts.map((maybeAccount) => {
