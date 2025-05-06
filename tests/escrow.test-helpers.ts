@@ -1,14 +1,12 @@
 import { Connection } from "solana-kite";
-import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
+import { lamports, type KeyPairSigner, type Address, decodeAccount } from "@solana/kit";
 import * as programClient from "../dist/js-client";
-import { OFFER_DISCRIMINATOR } from "../dist/js-client";
+import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
 import bs58 from "bs58";
 import { TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
+import { address } from "@solana/addresses";
 
-// For debugging. You could delete these, but then someone else will have to recreate them and then they'll be annoyed with you.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const log = console.log;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const stringify = (object: any) => {
   const bigIntReplacer = (key: string, value: any) => (typeof value === "bigint" ? value.toString() : value);
   return JSON.stringify(object, bigIntReplacer, 2);
@@ -19,6 +17,23 @@ export const ONE_SOL = lamports(1n * 1_000_000_000n);
 export const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
+
+// getProgramAccounts uses one format
+// decodeOffer uses another
+export function getProgramAccountsResultToEncodedAccount(result: any) {
+  // Decode base64 data to Buffer
+  const base64String = result.account.data[0];
+  const bytes = Buffer.from(base64String, "base64");
+  return {
+    executable: result.account.executable,
+    lamports: BigInt(result.account.lamports),
+    programAddress: address(programClient.ESCROW_PROGRAM_ADDRESS),
+    space: BigInt(result.account.space),
+    address: address(result.pubkey),
+    data: bytes,
+    exists: true,
+  };
+}
 
 // Helper function to create a test offer
 export async function createTestOffer(params: {
@@ -66,3 +81,28 @@ export async function createTestOffer(params: {
 
   return { offer, vault, offerId, signature };
 }
+
+export const getOffers = async (connection: Connection) => {
+  // See https://solana.com/docs/rpc/http/getprogramaccounts
+  const getProgramAccountsResults = await connection.rpc
+    .getProgramAccounts(programClient.ESCROW_PROGRAM_ADDRESS, {
+      encoding: "base64",
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: bs58.encode(Buffer.from(OFFER_DISCRIMINATOR)),
+          },
+        },
+      ],
+    })
+    .send();
+
+  const encodedAccounts = getProgramAccountsResults.map((result: any) =>
+    getProgramAccountsResultToEncodedAccount(result),
+  );
+  const decodedAccounts = encodedAccounts.map((maybeAccount) => {
+    return decodeAccount(maybeAccount, getOfferDecoder());
+  });
+  return decodedAccounts;
+};

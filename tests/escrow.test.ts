@@ -5,7 +5,7 @@ import { OFFER_DISCRIMINATOR } from "../dist/js-client";
 import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, ErrorWithTransaction } from "solana-kite";
 import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
 import bs58 from "bs58";
-import { createTestOffer, getRandomBigInt, ONE_SOL, log, stringify } from "./escrow.test-helpers";
+import { createTestOffer, getRandomBigInt, ONE_SOL, log, stringify, getOffers } from "./escrow.test-helpers";
 
 const INSUFFICIENT_FUNDS_ERROR = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb.TransferChecked: insufficient funds";
 const REFUND_OFFER_ERROR =
@@ -159,6 +159,50 @@ describe("Escrow", () => {
           error.message === INSUFFICIENT_FUNDS_ERROR,
           `Expected "${INSUFFICIENT_FUNDS_ERROR}" but got: ${error.message}`,
         );
+      }
+    });
+  });
+
+  describe("can get all the offers", () => {
+    test("successfully gets all the offers", async () => {
+      const offers = await getOffers(connection);
+
+      assert.ok(offers.length === 2, "Expected to get two offers");
+
+      // The first offer is created in the 'successfully creates an offer with valid inputs' test
+      const offer1 = offers[0];
+      assert.ok(offer1.exists, "Offer 1 account should exist");
+      if (offer1.exists) {
+        // This offer was created by Alice in the first makeOffer test
+        assert.equal(offer1.address, offer1.address, "Offer 1 address should match");
+        assert.equal(offer1.data.maker, alice.address, "Offer 1 maker address should match Alice");
+        assert.equal(offer1.data.tokenMintA, tokenMintA, "Offer 1 tokenMintA should match");
+        assert.equal(offer1.data.tokenMintB, tokenMintB, "Offer 1 tokenMintB should match");
+        assert.equal(
+          offer1.data.tokenBWantedAmount,
+          tokenBWantedAmount.toString(),
+          "Offer 1 tokenBWantedAmount should match",
+        );
+        assert.ok(typeof offer1.data.bump === "number", "Offer 1 bump should be a number");
+        assert.ok(offer1.data.discriminator, "Offer 1 discriminator should exist");
+      }
+
+      // The second offer is created in the 'fails when trying to reuse an existing offer ID' test (by Alice, before Bob tries to reuse the ID)
+      const offer2 = offers[1];
+      assert.ok(offer2.exists, "Offer 2 account should exist");
+      if (offer2.exists) {
+        // This offer was also created by Alice, with a specific offer ID
+        assert.equal(offer2.address, offer2.address, "Offer 2 address should match");
+        assert.equal(offer2.data.maker, alice.address, "Offer 2 maker address should match Alice");
+        assert.equal(offer2.data.tokenMintA, tokenMintA, "Offer 2 tokenMintA should match");
+        assert.equal(offer2.data.tokenMintB, tokenMintB, "Offer 2 tokenMintB should match");
+        assert.equal(
+          offer2.data.tokenBWantedAmount,
+          tokenBWantedAmount.toString(),
+          "Offer 2 tokenBWantedAmount should match",
+        );
+        assert.ok(typeof offer2.data.bump === "number", "Offer 2 bump should be a number");
+        assert.ok(offer2.data.discriminator, "Offer 2 discriminator should exist");
       }
     });
   });
