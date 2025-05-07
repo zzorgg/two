@@ -9,7 +9,7 @@
 **Anchor Escrow 2025** provides:
 
 - Full compatibility with the latest Rust, Agave CLI, Node.js, Anchor, and Solana Kit.
-- Clean builds with zero warnings or errors for a smooth, distraction-free experience.
+- Clean builds with zero warnings or errors.
 - Testing via npm and Node.js, avoiding third-party package managers or test runners.
 
 ## Animated walk through
