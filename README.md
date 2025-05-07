@@ -36,7 +36,7 @@ The **Anchor Escrow 2025** program acts as a trusted intermediary, releasing tok
 Verify your local environment with:
 
 ```bash
-bash show-version.sh
+bash show-versions.sh
 ```
 
 This repository was tested with:
