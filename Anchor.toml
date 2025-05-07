@@ -20,5 +20,4 @@ wallet = "~/.config/solana/id.json"
 [scripts]
 # We need '--test-reporter=spec' to get a more readable output on GitHub CI
 # this has no effect on local runs
-# We use '--no-warnings' to suppress warnings about Ed25519 being experimental in node.js
-test = "npx tsx create-codama-client.ts; npx tsx --test --test-reporter=spec --no-warnings tests/*.ts"
+test = "npx tsx create-codama-client.ts; npx tsx --test --test-reporter=spec tests/*.ts"
