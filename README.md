@@ -36,16 +36,24 @@ The **Anchor Escrow 2025** program acts as a trusted intermediary, releasing tok
 Verify your local environment with:
 
 ```bash
-echo "Solana CLI: $(solana -V)\nAnchor: $(anchor --version)\nNode: $(node --version)\nRust: $(rustc -V)"
+bash show-version.sh
 ```
 
 This repository was tested with:
 
 ```
-Solana CLI: solana-cli 2.1.0 (src:c1080de4; feat:3176011155, client:Agave)
-Anchor: anchor-cli 0.31.1
-Node: v22.11.0
-Rust: rustc 1.82.0 (f6e511eec 2024-10-15)
+OS:
+  MacOS 15.4.1
+Solana CLI:
+  solana-cli 2.1.21 (src:8a085eeb; feat:1416569292, client:Agave)
+Anchor:
+  anchor-cli 0.31.1
+Node:
+  v22.14.0
+Rust:
+  rustc 1.86.0 (05f9846f8 2025-03-31)
+build-sbf version:
+  solana-cargo-build-sbf 2.1.21
 ```
 
 Using different versions may cause compatibility issues.
