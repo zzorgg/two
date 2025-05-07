@@ -1,5 +1,12 @@
 import { Connection } from "solana-kite";
-import { lamports, type KeyPairSigner, type Address, decodeAccount, MaybeEncodedAccount } from "@solana/kit";
+import {
+  lamports,
+  type KeyPairSigner,
+  type Address,
+  decodeAccount,
+  MaybeEncodedAccount,
+  parseBase64RpcAccount,
+} from "@solana/kit";
 import * as programClient from "../dist/js-client";
 import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
 import bs58 from "bs58";
@@ -17,37 +24,6 @@ export const ONE_SOL = lamports(1n * 1_000_000_000n);
 export const getRandomBigInt = () => {
   return BigInt(Math.floor(Math.random() * 1_000_000_000_000_000_000));
 };
-
-interface ProgramAccountWithBase64Encoding {
-  pubkey: Address;
-  account: {
-    data: [string, "base64"];
-    executable: boolean;
-    lamports: number;
-    owner: Address;
-    rentEpoch: number;
-    space: number;
-  };
-}
-
-// getProgramAccounts uses one format
-// decodeOffer uses another
-export function getProgramAccountsResultToEncodedAccount(
-  result: ProgramAccountWithBase64Encoding,
-): MaybeEncodedAccount {
-  // Decode base64 data to Buffer
-  const base64String = result.account.data[0];
-  const bytes = Buffer.from(base64String, "base64");
-  return {
-    executable: result.account.executable,
-    lamports: lamports(BigInt(result.account.lamports)),
-    programAddress: address(programClient.ESCROW_PROGRAM_ADDRESS),
-    space: BigInt(result.account.space),
-    address: address(result.pubkey),
-    data: bytes,
-    exists: true,
-  };
-}
 
 // Helper function to create a test offer
 export async function createTestOffer(params: {
@@ -98,9 +74,9 @@ export async function createTestOffer(params: {
 
 export const getOffers = async (connection: Connection) => {
   // See https://solana.com/docs/rpc/http/getprogramaccounts
-  const getProgramAccountsResults: Array<ProgramAccountWithBase64Encoding> = await connection.rpc
+  const getProgramAccountsResults = await connection.rpc
     .getProgramAccounts(programClient.ESCROW_PROGRAM_ADDRESS, {
-      encoding: "base64",
+      encoding: "jsonParsed",
       filters: [
         {
           memcmp: {
@@ -112,9 +88,17 @@ export const getOffers = async (connection: Connection) => {
     })
     .send();
 
-  const encodedAccounts: Array<MaybeEncodedAccount> = getProgramAccountsResults.map((result: any) =>
-    getProgramAccountsResultToEncodedAccount(result),
-  );
+  // getProgramAccounts uses one format
+  // decodeOffer uses another
+  const encodedAccounts: Array<MaybeEncodedAccount> = getProgramAccountsResults.map((result) => {
+    const account = parseBase64RpcAccount(result.pubkey, result.account);
+    return {
+      ...account,
+      data: Buffer.from(account.data),
+      exists: true,
+    };
+  });
+
   const decodedAccounts = encodedAccounts.map((maybeAccount) => {
     return decodeAccount(maybeAccount, getOfferDecoder());
   });
