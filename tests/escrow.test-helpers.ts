@@ -10,7 +10,7 @@ import {
 } from "@solana/kit";
 import * as programClient from "../dist/js-client";
 import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
-import bs58 from "bs58";
+
 import { TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
 import { address } from "@solana/addresses";
 
@@ -72,48 +72,3 @@ export async function createTestOffer(params: {
 
   return { offer, vault, offerId, signature };
 }
-
-export const getAccountsFactory = <T extends object>(
-  programAddress: Address,
-  discriminator: Uint8Array,
-  decoder: Decoder<T>,
-) => {
-  return async (connection: Connection) => {
-    // See https://solana.com/docs/rpc/http/getprogramaccounts
-    const getProgramAccountsResults = await connection.rpc
-      .getProgramAccounts(programAddress, {
-        encoding: "jsonParsed",
-        filters: [
-          {
-            memcmp: {
-              offset: 0,
-              bytes: bs58.encode(Buffer.from(discriminator)),
-            },
-          },
-        ],
-      })
-      .send();
-
-    // getProgramAccounts uses one format
-    // decodeAccount uses another
-    const encodedAccounts: Array<MaybeEncodedAccount> = getProgramAccountsResults.map((result) => {
-      const account = parseBase64RpcAccount(result.pubkey, result.account);
-      return {
-        ...account,
-        data: Buffer.from(account.data),
-        exists: true,
-      };
-    });
-
-    const decodedAccounts = encodedAccounts.map((maybeAccount) => {
-      return decodeAccount(maybeAccount, decoder);
-    });
-    return decodedAccounts;
-  };
-};
-
-export const getOffers = getAccountsFactory(
-  programClient.ESCROW_PROGRAM_ADDRESS,
-  OFFER_DISCRIMINATOR,
-  getOfferDecoder(),
-);
