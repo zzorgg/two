@@ -2,10 +2,9 @@ import { before, describe, test, it } from "node:test";
 import assert from "node:assert";
 import * as programClient from "../dist/js-client";
 import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
-import { connect, Connection, SOL, TOKEN_EXTENSIONS_PROGRAM, ErrorWithTransaction } from "solana-kite";
-import { lamports, type KeyPairSigner, type Address } from "@solana/kit";
-import bs58 from "bs58";
-import { createTestOffer, getRandomBigInt, ONE_SOL, log, stringify } from "./escrow.test-helpers";
+import { connect, Connection, TOKEN_EXTENSIONS_PROGRAM, ErrorWithTransaction } from "solana-kite";
+import { type KeyPairSigner, type Address } from "@solana/kit";
+import { createTestOffer, getRandomBigInt, ONE_SOL } from "./escrow.test-helpers";
 
 const INSUFFICIENT_FUNDS_ERROR = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb.TransferChecked: insufficient funds";
 const REFUND_OFFER_ERROR =
