@@ -5,9 +5,7 @@ import {
   type Address,
 } from "@solana/kit";
 import * as programClient from "../dist/js-client";
-
 import { TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
-import { address } from "@solana/addresses";
 
 export const log = console.log;
 export const stringify = (object: any) => {
