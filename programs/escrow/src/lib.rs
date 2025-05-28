@@ -1,11 +1,10 @@
+use anchor_lang::prelude::*;
+use handlers::*;
 
 pub mod constants;
 pub mod error;
 pub mod handlers;
 pub mod state;
-
-use anchor_lang::prelude::*;
-use handlers::*;
 
 declare_id!("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y");
 
