@@ -1,5 +1,3 @@
-#![allow(unexpected_cfgs)]
-// See https://solana.stackexchange.com/questions/17777/unexpected-cfg-condition-value-solana)
 
 pub mod constants;
 pub mod error;
