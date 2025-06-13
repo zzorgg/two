@@ -308,6 +308,46 @@ describe("Escrow", () => {
       });
       assert.equal(aliceTokenBBalance.amount, tokenBWantedAmount, "Alice's token B balance should match wanted amount");
     });
+
+    test("fails when taker has insufficient token balance", async () => {
+      // Create an offer from Alice for a large amount of token B
+      const largeTokenBAmount = 1000n * TOKEN; // Much larger than Bob's balance
+      const { offer, vault } = await createTestOffer({
+        connection,
+        maker: alice,
+        tokenMintA,
+        tokenMintB,
+        makerTokenAccountA: aliceTokenAccountA,
+        tokenAOfferedAmount,
+        tokenBWantedAmount: largeTokenBAmount,
+      });
+
+      const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
+        taker: bob,
+        maker: alice.address,
+        tokenMintA,
+        tokenMintB,
+        takerTokenAccountA: bobTokenAccountA,
+        makerTokenAccountB: aliceTokenAccountB,
+        offer,
+        vault,
+        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
+      });
+
+      try {
+        await connection.sendTransactionFromInstructions({
+          feePayer: bob,
+          instructions: [takeOfferInstruction],
+        });
+        assert.fail("Expected the take offer to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as ErrorWithTransaction;
+        assert(
+          error.message === INSUFFICIENT_FUNDS_ERROR,
+          `Expected "${INSUFFICIENT_FUNDS_ERROR}" but got: ${error.message}`,
+        );
+      }
+    });
   });
 
   describe("refundOffer", () => {
