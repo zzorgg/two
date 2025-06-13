@@ -201,6 +201,24 @@ describe("Escrow", () => {
         assert(error.message.includes(INVALID_AMOUNT_ERROR), `Expected InvalidAmount error but got: ${error.message}`);
       }
     });
+
+    test("fails when token_a_offered_amount is zero", async () => {
+      try {
+        await createTestOffer({
+          connection,
+          maker: alice,
+          tokenMintA,
+          tokenMintB,
+          makerTokenAccountA: aliceTokenAccountA,
+          tokenAOfferedAmount: 0n,
+          tokenBWantedAmount,
+        });
+        assert.fail("Expected the offer creation to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as ErrorWithTransaction;
+        assert(error.message.includes(INVALID_AMOUNT_ERROR), `Expected InvalidAmount error but got: ${error.message}`);
+      }
+    });
   });
 
   describe("can get all the offers", () => {
