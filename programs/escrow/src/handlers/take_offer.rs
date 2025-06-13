@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::Offer;
+use crate::{error::ErrorCode, state::Offer};
 
 use super::shared::{close_token_account, transfer_tokens};
 
@@ -83,7 +83,8 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         &context.accounts.taker.to_account_info(),
         &context.accounts.token_program,
         None,
-    )?;
+    )
+    .map_err(|_| ErrorCode::InsufficientTakerBalance)?;
 
     let offer_account_seeds = &[
         b"offer",

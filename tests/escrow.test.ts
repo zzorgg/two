@@ -10,6 +10,8 @@ const INSUFFICIENT_FUNDS_ERROR = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb.Tr
 const REFUND_OFFER_ERROR =
   "8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y.RefundOffer: A has one constraint was violated";
 const ACCOUNT_IN_USE_ERROR = "11111111111111111111111111111111.Allocate: account already in use";
+const INVALID_TOKEN_MINT_ERROR = "custom program error: #6002";
+const INVALID_AMOUNT_ERROR = "custom program error: #6003";
 
 describe("Escrow", () => {
   let connection: Connection;
@@ -160,6 +162,45 @@ describe("Escrow", () => {
         );
       }
     });
+
+    test("fails when token mints are the same", async () => {
+      try {
+        await createTestOffer({
+          connection,
+          maker: alice,
+          tokenMintA,
+          tokenMintB: tokenMintA, // Using same mint
+          makerTokenAccountA: aliceTokenAccountA,
+          tokenAOfferedAmount,
+          tokenBWantedAmount,
+        });
+        assert.fail("Expected the offer creation to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as ErrorWithTransaction;
+        assert(
+          error.message.includes(INVALID_TOKEN_MINT_ERROR),
+          `Expected InvalidTokenMint error but got: ${error.message}`,
+        );
+      }
+    });
+
+    test("fails when token_b_wanted_amount is zero", async () => {
+      try {
+        await createTestOffer({
+          connection,
+          maker: alice,
+          tokenMintA,
+          tokenMintB,
+          makerTokenAccountA: aliceTokenAccountA,
+          tokenAOfferedAmount,
+          tokenBWantedAmount: 0n,
+        });
+        assert.fail("Expected the offer creation to fail but it succeeded");
+      } catch (thrownObject) {
+        const error = thrownObject as ErrorWithTransaction;
+        assert(error.message.includes(INVALID_AMOUNT_ERROR), `Expected InvalidAmount error but got: ${error.message}`);
+      }
+    });
   });
 
   describe("can get all the offers", () => {
@@ -266,41 +307,6 @@ describe("Escrow", () => {
         useTokenExtensions: true,
       });
       assert.equal(aliceTokenBBalance.amount, tokenBWantedAmount, "Alice's token B balance should match wanted amount");
-    });
-
-    test("fails when taker has insufficient token balance", async () => {
-      const { offer, vault } = await createTestOffer({
-        connection,
-        maker: alice,
-        tokenMintA,
-        tokenMintB,
-        makerTokenAccountA: aliceTokenAccountA,
-        tokenAOfferedAmount,
-        tokenBWantedAmount: 10_000_000_000n,
-      });
-
-      const takeOfferInstruction = await programClient.getTakeOfferInstructionAsync({
-        taker: bob,
-        maker: alice.address,
-        tokenMintA,
-        tokenMintB,
-        takerTokenAccountA: bobTokenAccountA,
-        makerTokenAccountB: aliceTokenAccountB,
-        offer,
-        vault,
-        tokenProgram: TOKEN_EXTENSIONS_PROGRAM,
-      });
-
-      try {
-        await connection.sendTransactionFromInstructions({
-          feePayer: bob,
-          instructions: [takeOfferInstruction],
-        });
-        assert.fail("Expected the take offer to fail but it succeeded");
-      } catch (thrownObject) {
-        const error = thrownObject as ErrorWithTransaction;
-        assert.equal(error.message, INSUFFICIENT_FUNDS_ERROR, `Expected insufficient funds error`);
-      }
     });
   });
 

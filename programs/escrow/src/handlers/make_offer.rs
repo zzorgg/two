@@ -1,5 +1,5 @@
 use super::shared::transfer_tokens;
-use crate::state::Offer;
+use crate::{error::ErrorCode, state::Offer};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -59,6 +59,16 @@ pub fn make_offer(
     token_a_offered_amount: u64,
     token_b_wanted_amount: u64,
 ) -> Result<()> {
+    // Validate amounts
+    require!(token_a_offered_amount > 0, ErrorCode::InvalidAmount);
+    require!(token_b_wanted_amount > 0, ErrorCode::InvalidAmount);
+
+    // Validate token mints are different
+    require!(
+        context.accounts.token_mint_a.key() != context.accounts.token_mint_b.key(),
+        ErrorCode::InvalidTokenMint
+    );
+
     // Move the tokens from the maker's ATA to the vault
     transfer_tokens(
         &context.accounts.maker_token_account_a,
@@ -68,7 +78,8 @@ pub fn make_offer(
         &context.accounts.maker.to_account_info(),
         &context.accounts.token_program,
         None,
-    )?;
+    )
+    .map_err(|_| ErrorCode::InsufficientMakerBalance)?;
 
     // Save the details of the offer to the offer account
     context.accounts.offer.set_inner(Offer {
