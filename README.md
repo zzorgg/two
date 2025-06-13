@@ -4,7 +4,9 @@
 
 [![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)](https://github.com/mikemaccana/anchor-escrow-2025/actions)
 
-**Start here for your first real Solana program.** As the saying goes, "All Solana programs are variations of an escrow." This makes **Anchor Escrow 2025** the perfect starting point for anyone diving into Solana development with a practical, real-world application.
+**Start here for your first real Solana program / smart contract** (Solana generally uses the word 'program', older blockchains use 'smart contract'). As the saying goes, "All Solana programs are variations of an escrow." 
+
+This makes **Anchor Escrow 2025** the perfect starting point for anyone diving into Solana program development with a practical, real-world application.
 
 **Anchor Escrow 2025** provides:
 

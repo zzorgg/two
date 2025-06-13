@@ -3,16 +3,9 @@ import {
   lamports,
   type KeyPairSigner,
   type Address,
-  decodeAccount,
-  MaybeEncodedAccount,
-  parseBase64RpcAccount,
-  type Decoder,
 } from "@solana/kit";
 import * as programClient from "../dist/js-client";
-import { getOfferDecoder, OFFER_DISCRIMINATOR } from "../dist/js-client";
-
 import { TOKEN_EXTENSIONS_PROGRAM } from "solana-kite";
-import { address } from "@solana/addresses";
 
 export const log = console.log;
 export const stringify = (object: any) => {
