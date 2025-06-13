@@ -26,6 +26,6 @@ pub mod escrow {
     }
 
     pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
-        handlers::refund::refund_offer(context)
+        handlers::refund_offer::refund_offer(context)
     }
 }
