@@ -26,6 +26,8 @@ pub fn transfer_tokens<'info>(
     // Only one signer seed (the PDA that owns the token account) is needed, so we create an array with the seeds
     let signers_seeds = owning_pda_seeds.map(|seeds| [seeds]);
 
+    // Do the transfer, by calling transfer_checked - providing a different CPIU context
+    // depending on whether we're sending tokens from a PDA or not
     transfer_checked(
         if let Some(seeds_arr) = signers_seeds.as_ref() {
             CpiContext::new_with_signer(
