@@ -10,6 +10,17 @@ use anchor_spl::{
 #[derive(Accounts)]
 #[instruction(id: u64)]
 pub struct MakeOffer<'info> {
+    // Used to manage associated token accounts
+    // ie where a wallet holds a specific type of token
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    // Work with either the classic token program or
+    // the newer token extensions program
+    pub token_program: Interface<'info, TokenInterface>,
+
+    // Used to create accounts
+    pub system_program: Program<'info, System>,
+
     #[account(mut)]
     pub maker: Signer<'info>,
 
@@ -44,10 +55,6 @@ pub struct MakeOffer<'info> {
         associated_token::token_program = token_program
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
 }
 
 // Handle the make offer instruction by:
