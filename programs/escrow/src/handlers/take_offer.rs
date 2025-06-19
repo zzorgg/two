@@ -1,16 +1,24 @@
+use super::shared::{close_token_account, transfer_tokens};
+use crate::{error::ErrorCode, state::Offer};
 use anchor_lang::prelude::*;
-
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{error::ErrorCode, state::Offer};
-
-use super::shared::{close_token_account, transfer_tokens};
-
 #[derive(Accounts)]
 pub struct TakeOffer<'info> {
+    // Used to manage associated token accounts
+    // ie where a wallet holds a specific type of token
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    // Work with either the classic token program or
+    // the newer token extensions program
+    pub token_program: Interface<'info, TokenInterface>,
+
+    // Used to create accounts
+    pub system_program: Program<'info, System>,
+
     #[account(mut)]
     pub taker: Signer<'info>,
 
@@ -64,10 +72,6 @@ pub struct TakeOffer<'info> {
         associated_token::token_program = token_program,
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
 }
 
 // Handle the take offer instruction by:
