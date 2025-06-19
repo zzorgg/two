@@ -6,6 +6,13 @@ use crate::{error::ErrorCode, state::Offer};
 
 #[derive(Accounts)]
 pub struct RefundOffer<'info> {
+    // Work with either the classic token program or
+    // the newer token extensions program
+    pub token_program: Interface<'info, TokenInterface>,
+
+    // Used to create accounts
+    pub system_program: Program<'info, System>,
+
     #[account(mut)]
     pub maker: Signer<'info>,
 
@@ -35,9 +42,6 @@ pub struct RefundOffer<'info> {
         associated_token::token_program = token_program,
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
-
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
 }
 
 // Handle the refund offer instruction by:
