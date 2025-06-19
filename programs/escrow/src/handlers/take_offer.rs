@@ -75,21 +75,12 @@ pub struct TakeOffer<'info> {
 }
 
 // Handle the take offer instruction by:
-// 1. Sending the wanted tokens from the taker to the maker
-// 2. Withdrawing the offered tokens from the vault to the taker and closing the vault
+// 1. Withdrawing the offered tokens from the vault to the taker and closing the vault
+// 2. Sending the wanted tokens from the taker to the maker
 pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
-    // Send the wanted tokens from the taker to the maker
-    transfer_tokens(
-        &context.accounts.taker_token_account_b,
-        &context.accounts.maker_token_account_b,
-        &context.accounts.offer.token_b_wanted_amount,
-        &context.accounts.token_mint_b,
-        &context.accounts.taker.to_account_info(),
-        &context.accounts.token_program,
-        None,
-    )
-    .map_err(|_| ErrorCode::InsufficientTakerBalance)?;
-
+    // Since the Offer account owns the Vault, we will say
+    // there is one signer (the offer), with the seeds of the specific offer account
+    // We can use these signer seeds to withdraw the token from the vault
     let offer_account_seeds = &[
         b"offer",
         &context.accounts.offer.id.to_le_bytes()[..],
@@ -116,6 +107,18 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         &context.accounts.token_program,
         signers_seeds,
     )?;
+
+    // Send the wanted tokens from the taker to the maker
+    transfer_tokens(
+        &context.accounts.taker_token_account_b,
+        &context.accounts.maker_token_account_b,
+        &context.accounts.offer.token_b_wanted_amount,
+        &context.accounts.token_mint_b,
+        &context.accounts.taker.to_account_info(),
+        &context.accounts.token_program,
+        None,
+    )
+    .map_err(|_| ErrorCode::InsufficientTakerBalance)?;
 
     Ok(())
 }
