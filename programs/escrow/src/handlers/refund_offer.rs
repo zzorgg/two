@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use super::shared::{close_token_account, transfer_tokens};
-use crate::state::Offer;
+use crate::{error::ErrorCode, state::Offer};
 
 #[derive(Accounts)]
 pub struct RefundOffer<'info> {
@@ -60,7 +60,8 @@ pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
         signers_seeds,
-    )?;
+    )
+    .map_err(|_| ErrorCode::FailedRefundTransfer)?;
 
     // Close the vault and return the rent to the maker
     close_token_account(
@@ -70,4 +71,7 @@ pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
         &context.accounts.token_program,
         signers_seeds,
     )
+    .map_err(|_| ErrorCode::FailedRefundClosure)?;
+
+    Ok(())
 }

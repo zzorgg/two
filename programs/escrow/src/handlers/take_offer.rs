@@ -97,7 +97,8 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
         signers_seeds,
-    )?;
+    )
+    .map_err(|_| ErrorCode::FailedVaultWithdrawal)?;
 
     // Close the vault and return the rent to the maker
     close_token_account(
@@ -106,7 +107,8 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
         signers_seeds,
-    )?;
+    )
+    .map_err(|_| ErrorCode::FailedVaultClosure)?;
 
     // Send the wanted tokens from the taker to the maker
     transfer_tokens(
