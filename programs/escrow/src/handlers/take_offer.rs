@@ -115,5 +115,7 @@ pub fn take_offer(context: Context<TakeOffer>) -> Result<()> {
         &context.accounts.offer.to_account_info(),
         &context.accounts.token_program,
         signers_seeds,
-    )
+    )?;
+
+    Ok(())
 }
