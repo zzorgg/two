@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use crate::escrow_test_helpers::{
     build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
-    setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts, TOKEN,
+    setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts, TOKEN_A, TOKEN_B,
 };
 use crate::test_helpers::{
     assert_token_balance, create_associated_token_account, create_token_mint, deploy_program,
@@ -54,10 +54,9 @@ fn test_make_offer_succeeds() {
         &mint_authority,
     );
 
-    let token = 1_000_000_000u64; // 1 token (10^9)
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let bob_initial_token_a = 1;
-    let bob_initial_token_b = 1 * token;
+    let bob_initial_token_b = 1 * TOKEN_B;
 
     mint_tokens_to_account(
         &mut litesvm,
@@ -93,8 +92,8 @@ fn test_make_offer_succeeds() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes()); // token_b_wanted_amount
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -117,8 +116,8 @@ fn test_make_offer_succeeds() {
 
     let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -184,8 +183,7 @@ fn test_duplicate_offer_id_fails() {
         &mint_authority,
     );
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let bob_initial_token_a = 1;
 
     mint_tokens_to_account(
@@ -215,8 +213,8 @@ fn test_duplicate_offer_id_fails() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -243,8 +241,8 @@ fn test_duplicate_offer_id_fails() {
 
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -347,8 +345,7 @@ fn test_insufficient_funds_fails() {
     transaction.sign(&[&alice], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let initialize_mint_instruction = spl_token::instruction::mint_to(
         &spl_token::ID,
         &token_mint_a.pubkey(),
@@ -380,8 +377,8 @@ fn test_insufficient_funds_fails() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1000 * token).to_le_bytes()); // Try to offer 1000 tokens (Alice only has 10)
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1000 * TOKEN_A).to_le_bytes()); // Try to offer 1000 tokens (Alice only has 10)
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -485,8 +482,7 @@ fn test_same_token_mints_fails() {
     transaction.sign(&[&alice], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let initialize_mint_instruction = spl_token::instruction::mint_to(
         &spl_token::ID,
         &token_mint_a.pubkey(),
@@ -518,8 +514,8 @@ fn test_same_token_mints_fails() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -626,8 +622,7 @@ fn test_zero_token_b_wanted_amount_fails() {
     transaction.sign(&[&alice], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let initialize_mint_instruction = spl_token::instruction::mint_to(
         &spl_token::ID,
         &token_mint_a.pubkey(),
@@ -659,7 +654,7 @@ fn test_zero_token_b_wanted_amount_fails() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
     instruction_data.extend_from_slice(&0u64.to_le_bytes()); // Zero wanted amount
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
@@ -770,8 +765,7 @@ fn test_zero_token_a_offered_amount_fails() {
     transaction.sign(&[&alice], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     let initialize_mint_instruction = spl_token::instruction::mint_to(
         &spl_token::ID,
         &token_mint_a.pubkey(),
@@ -804,7 +798,7 @@ fn test_zero_token_a_offered_amount_fails() {
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&0u64.to_le_bytes()); // Zero offered amount
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -862,8 +856,8 @@ fn test_take_offer_success() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        3 * TOKEN, // token_a_offered_amount
-        2 * TOKEN, // token_b_wanted_amount
+        3 * TOKEN_A, // token_a_offered_amount
+        2 * TOKEN_B, // token_b_wanted_amount
         make_offer_accounts,
     );
 
@@ -904,25 +898,25 @@ fn test_take_offer_success() {
     assert_token_balance(
         &test_environment.litesvm,
         &test_environment.alice_token_account_a,
-        7 * TOKEN,
+        7 * TOKEN_A,
         "Alice should have 7 token A left",
     );
     assert_token_balance(
         &test_environment.litesvm,
         &test_environment.alice_token_account_b,
-        2 * TOKEN,
+        2 * TOKEN_B,
         "Alice should have received 2 token B",
     );
     assert_token_balance(
         &test_environment.litesvm,
         &test_environment.bob_token_account_a,
-        3 * TOKEN,
+        3 * TOKEN_A,
         "Bob should have received 3 token A",
     );
     assert_token_balance(
         &test_environment.litesvm,
         &test_environment.bob_token_account_b,
-        3 * TOKEN,
+        3 * TOKEN_B,
         "Bob should have 3 token B left",
     );
 
@@ -973,8 +967,7 @@ fn test_refund_offer_success() {
     );
 
     // Mint tokens to Alice
-    let token = 1_000_000_000u64; // 1 token (10^9)
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     mint_tokens_to_account(
         &mut litesvm,
         &token_mint_a.pubkey(),
@@ -996,8 +989,8 @@ fn test_refund_offer_success() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
+    instruction_data.extend_from_slice(&(3 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
+    instruction_data.extend_from_slice(&(2 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -1021,7 +1014,7 @@ fn test_refund_offer_success() {
     assert_token_balance(
         &litesvm,
         &alice_token_account_a,
-        7 * token,
+        7 * TOKEN_A,
         "Alice should have 7 token A left after creating offer",
     );
 
@@ -1049,7 +1042,7 @@ fn test_refund_offer_success() {
     assert_token_balance(
         &litesvm,
         &alice_token_account_a,
-        10 * token,
+        10 * TOKEN_A,
         "Alice should have all 10 token A back after refunding",
     );
 
@@ -1102,8 +1095,7 @@ fn test_non_maker_cannot_refund_offer() {
     );
 
     // Mint tokens to Alice
-    let token = 1_000_000_000u64; // 1 token (10^9)
-    let alice_initial_token_a = 10 * token;
+    let alice_initial_token_a = 10 * TOKEN_A;
     mint_tokens_to_account(
         &mut litesvm,
         &token_mint_a.pubkey(),
@@ -1125,8 +1117,8 @@ fn test_non_maker_cannot_refund_offer() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
+    instruction_data.extend_from_slice(&(3 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
+    instruction_data.extend_from_slice(&(2 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
         solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
@@ -1178,7 +1170,7 @@ fn test_non_maker_cannot_refund_offer() {
     assert_token_balance(
         &litesvm,
         &alice_token_account_a,
-        7 * token,
+        7 * TOKEN_A,
         "Alice's balance should remain unchanged after failed refund attempt",
     );
 
@@ -1269,6 +1261,11 @@ fn test_take_offer_insufficient_funds_fails() {
         &alice.pubkey(),
         &token_mint_b.pubkey(),
     );
+    let alice_initial_token_a = 10 * TOKEN_A;
+    let bob_initial_token_a = 1;
+    let bob_initial_token_b = 1 * TOKEN_B;
+
+    // Create associated token accounts for Alice and Bob for both token mints
     for (owner, mint, _ata) in [
         (&alice, &token_mint_a, &alice_token_account_a),
         (&bob, &token_mint_a, &bob_token_account_a),
@@ -1292,10 +1289,7 @@ fn test_take_offer_insufficient_funds_fails() {
         litesvm.send_transaction(transaction).unwrap();
     }
 
-    let token = 1_000_000_000u64;
-    let alice_initial_token_a = 10 * token;
-    let bob_initial_token_a = 1;
-    let bob_initial_token_b = 1 * token;
+    // Mint tokens to the accounts
     let mint_to_instructions = vec![
         (
             token_mint_a.pubkey(),
@@ -1334,7 +1328,7 @@ fn test_take_offer_insufficient_funds_fails() {
     }
 
     // Create an offer from Alice for a large amount of token B
-    let large_token_b_amount = 1000 * token; // Much larger than Bob's balance
+    let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance
     let offer_id = 12345u64;
     let (offer_account, _offer_bump) =
         Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
@@ -1347,7 +1341,7 @@ fn test_take_offer_insufficient_funds_fails() {
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
     instruction_data.extend_from_slice(&large_token_b_amount.to_le_bytes());
     let account_metas = vec![
         solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),

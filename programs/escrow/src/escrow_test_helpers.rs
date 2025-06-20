@@ -11,8 +11,11 @@ use std::str::FromStr;
 
 pub const PROGRAM_ID: &str = "8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y";
 
-/// Standard token unit (1 token = 1_000_000_000 lamports for 9 decimals)
-pub const TOKEN: u64 = 1_000_000_000;
+/// Standard token unit for token A (1 token = 1_000_000_000 lamports for 9 decimals)
+pub const TOKEN_A: u64 = 1_000_000_000;
+
+/// Standard token unit for token B (1 token = 1_000_000_000 lamports for 9 decimals)
+pub const TOKEN_B: u64 = 1_000_000_000;
 
 /// Complete escrow test environment containing all necessary components for testing
 ///
@@ -143,14 +146,14 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
         &mut litesvm,
         &token_mint_a.pubkey(),
         &alice_token_account_a,
-        10 * TOKEN, // Alice gets 10 token A
+        10 * TOKEN_A, // Alice gets 10 token A
         &mint_authority,
     );
     mint_tokens_to_account(
         &mut litesvm,
         &token_mint_b.pubkey(),
         &bob_token_account_b,
-        5 * TOKEN, // Bob gets 5 token B
+        5 * TOKEN_B, // Bob gets 5 token B
         &mint_authority,
     );
 
