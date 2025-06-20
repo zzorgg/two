@@ -151,3 +151,13 @@ pub fn get_token_account_balance(litesvm: &LiteSVM, token_account: &Pubkey) -> u
     let amount_bytes = &data[64..72];
     u64::from_le_bytes(amount_bytes.try_into().expect("Failed to parse amount"))
 }
+
+pub fn assert_token_balance(
+    litesvm: &LiteSVM,
+    token_account: &Pubkey,
+    expected_balance: u64,
+    message: &str,
+) {
+    let actual_balance = get_token_account_balance(litesvm, token_account);
+    assert_eq!(actual_balance, expected_balance, "{}", message);
+}

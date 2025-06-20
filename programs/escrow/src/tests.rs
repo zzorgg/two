@@ -394,11 +394,12 @@ fn test_insufficient_funds_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(result.is_err(), "Offer with insufficient funds should fail");
 }
 
@@ -531,11 +532,12 @@ fn test_same_token_mints_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(result.is_err(), "Offer with same token mints should fail");
 }
 
@@ -671,11 +673,12 @@ fn test_zero_token_b_wanted_amount_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(
         result.is_err(),
         "Offer with zero token_b_wanted_amount should fail"
@@ -814,11 +817,12 @@ fn test_zero_token_a_offered_amount_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(
         result.is_err(),
         "Offer with zero token_a_offered_amount should fail"
@@ -1435,11 +1439,12 @@ fn test_take_offer_insufficient_funds_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(result.is_ok(), "Alice's offer should succeed");
 
     // Try to take the offer with Bob who has insufficient token B
@@ -1466,11 +1471,8 @@ fn test_take_offer_insufficient_funds_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&bob.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&bob], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result =
+        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
     assert!(
         result.is_err(),
         "Take offer with insufficient funds should fail"
