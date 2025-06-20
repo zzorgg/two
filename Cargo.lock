@@ -1077,9 +1077,13 @@ dependencies = [
  "solana-instruction",
  "solana-keypair",
  "solana-message",
+ "solana-program",
  "solana-pubkey",
  "solana-signer",
+ "solana-system-program",
  "solana-transaction",
+ "spl-associated-token-account",
+ "spl-token",
  "tokio",
 ]
 
