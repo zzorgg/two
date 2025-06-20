@@ -1269,7 +1269,7 @@ fn test_take_offer_insufficient_funds_fails() {
         &alice.pubkey(),
         &token_mint_b.pubkey(),
     );
-    for (owner, mint, ata) in [
+    for (owner, mint, _ata) in [
         (&alice, &token_mint_a, &alice_token_account_a),
         (&bob, &token_mint_a, &bob_token_account_a),
         (&bob, &token_mint_b, &bob_token_account_b),

@@ -25,7 +25,7 @@ pub struct EscrowTestEnvironment {
     /// The escrow program ID
     pub program_id: Pubkey,
     /// The mint authority that can create and mint tokens
-    pub mint_authority: Keypair,
+    pub _mint_authority: Keypair,
     /// Token mint A (the first token in escrow trades)
     pub token_mint_a: Keypair,
     /// Token mint B (the second token in escrow trades)
@@ -157,7 +157,7 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
     EscrowTestEnvironment {
         litesvm,
         program_id,
-        mint_authority,
+        _mint_authority: mint_authority,
         token_mint_a,
         token_mint_b,
         alice,
