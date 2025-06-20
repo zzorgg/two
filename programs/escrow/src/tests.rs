@@ -7,9 +7,13 @@ use solana_transaction::Transaction;
 use std::fs;
 use std::str::FromStr;
 
+use crate::escrow_test_helpers::{
+    build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
+    MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts,
+};
 use crate::test_helpers::{
     assert_token_balance, create_associated_token_account, create_token_mint, deploy_program,
-    get_token_account_balance, mint_tokens_to_account, send_transaction_from_instructions,
+    mint_tokens_to_account, send_transaction_from_instructions,
 };
 
 #[test]
@@ -914,58 +918,58 @@ fn test_take_offer_success() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
-    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
-        .unwrap();
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        3 * token, // token_a_offered_amount
+        2 * token, // token_b_wanted_amount
+        make_offer_accounts,
+    );
+
+    send_transaction_from_instructions(
+        &mut litesvm,
+        vec![make_offer_instruction],
+        &[&alice],
+        &alice.pubkey(),
+    )
+    .unwrap();
 
     // Bob takes the offer
-    let discriminator_input = b"global:take_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let instruction_data = instruction_discriminator;
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(bob.pubkey(), true),
-        solana_instruction::AccountMeta::new(alice.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(bob_token_account_a, false),
-        solana_instruction::AccountMeta::new(bob_token_account_b, false),
-        solana_instruction::AccountMeta::new(alice_token_account_b, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    let take_offer_accounts = TakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        taker: bob.pubkey(),
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        taker_token_account_a: bob_token_account_a,
+        taker_token_account_b: bob_token_account_b,
+        maker_token_account_b: alice_token_account_b,
+        offer_account,
+        vault,
     };
-    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey())
-        .unwrap();
+
+    let take_offer_instruction = build_take_offer_instruction(take_offer_accounts);
+    send_transaction_from_instructions(
+        &mut litesvm,
+        vec![take_offer_instruction],
+        &[&bob],
+        &bob.pubkey(),
+    )
+    .unwrap();
 
     // Check balances
     assert_token_balance(
@@ -1093,26 +1097,24 @@ fn test_refund_offer_success() {
     );
 
     // Alice refunds the offer
-    let discriminator_input = b"global:refund_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let instruction_data = instruction_discriminator;
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    let refund_offer_accounts = RefundOfferAccounts {
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
-    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
-        .unwrap();
+
+    let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
+    send_transaction_from_instructions(
+        &mut litesvm,
+        vec![refund_instruction],
+        &[&alice],
+        &alice.pubkey(),
+    )
+    .unwrap();
 
     // Check that Alice's balance is restored after refunding
     assert_token_balance(
@@ -1221,26 +1223,23 @@ fn test_non_maker_cannot_refund_offer() {
     assert!(result.is_ok(), "Alice's offer should succeed");
 
     // Bob tries to refund Alice's offer (should fail)
-    let discriminator_input = b"global:refund_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let instruction_data = instruction_discriminator;
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(bob.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    let refund_offer_accounts = RefundOfferAccounts {
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: bob.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
-    let result =
-        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
+
+    let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![refund_instruction],
+        &[&bob],
+        &bob.pubkey(),
+    );
     assert!(
         result.is_err(),
         "Non-maker should not be able to refund an offer"
