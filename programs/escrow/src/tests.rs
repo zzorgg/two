@@ -7,26 +7,18 @@ use solana_transaction::Transaction;
 use std::fs;
 use std::str::FromStr;
 
+use crate::test_helpers::{
+    create_associated_token_account, create_token_mint, deploy_program, mint_tokens_to_account,
+    send_transaction,
+};
+
 #[test]
 fn test_make_offer_succeeds() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
 
-    // --- SETUP: Mint authority, mints, token accounts, and minting tokens ---
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
+
     let mint_authority = Keypair::new();
     let alice = Keypair::new();
     let bob = Keypair::new();
@@ -36,118 +28,55 @@ fn test_make_offer_succeeds() {
     litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
     litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
 
-    // Create two mints
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82); // SPL Token mint size
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82], // SPL Token mint size
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    // Create associated token accounts for Alice and Bob for each mint
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &mint_authority,
     );
-    let bob_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &bob.pubkey(),
+    let bob_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &bob,
         &token_mint_a.pubkey(),
+        &mint_authority,
     );
-    let bob_token_account_b = spl_associated_token_account::get_associated_token_address(
-        &bob.pubkey(),
+    let bob_token_account_b = create_associated_token_account(
+        &mut litesvm,
+        &bob,
         &token_mint_b.pubkey(),
+        &mint_authority,
     );
-    let rent_token = litesvm.minimum_balance_for_rent_exemption(165); // SPL Token account size
-    for (owner, mint, ata) in [
-        (&alice, &token_mint_a, &alice_token_account_a),
-        (&bob, &token_mint_a, &bob_token_account_a),
-        (&bob, &token_mint_b, &bob_token_account_b),
-    ] {
-        let create_associated_token_account_instruction =
-            spl_associated_token_account::instruction::create_associated_token_account(
-                &owner.pubkey(),
-                &owner.pubkey(),
-                &mint.pubkey(),
-                &spl_token::ID,
-            );
-        let message = Message::new(
-            &[create_associated_token_account_instruction],
-            Some(&owner.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[owner], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
 
-    // Mint tokens to Alice and Bob
     let token = 1_000_000_000u64; // 1 token (10^9)
     let alice_initial_token_a = 10 * token;
     let bob_initial_token_a = 1;
     let bob_initial_token_b = 1 * token;
-    let mint_to_instructions = vec![
-        (
-            token_mint_a.pubkey(),
-            alice_token_account_a,
-            alice_initial_token_a,
-        ),
-        (
-            token_mint_a.pubkey(),
-            bob_token_account_a,
-            bob_initial_token_a,
-        ),
-        (
-            token_mint_b.pubkey(),
-            bob_token_account_b,
-            bob_initial_token_b,
-        ),
-    ];
-    for (mint, ata, amount) in mint_to_instructions {
-        let mint_to_instruction = spl_token::instruction::mint_to(
-            &spl_token::ID,
-            &mint,
-            &ata,
-            &mint_authority.pubkey(),
-            &[],
-            amount,
-        )
-        .unwrap();
-        let message = Message::new(&[mint_to_instruction], Some(&mint_authority.pubkey()));
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
 
-    // --- Now run the make_offer test as before, using Alice's accounts ---
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &alice_token_account_a,
+        alice_initial_token_a,
+        &mint_authority,
+    );
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &bob_token_account_a,
+        bob_initial_token_a,
+        &mint_authority,
+    );
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_b.pubkey(),
+        &bob_token_account_b,
+        bob_initial_token_b,
+        &mint_authority,
+    );
+
     let offer_id = 12345u64;
     let (offer_account, _offer_bump) =
         Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
@@ -178,34 +107,20 @@ fn test_make_offer_succeeds() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
-    match result {
-        Ok(transaction_metadata) => {
-            println!(
-                "✅ make_offer transaction successful! Signature: {:?}",
-                transaction_metadata
-            );
-            let offer_account_data = litesvm
-                .get_account(&offer_account)
-                .expect("Failed to get offer account");
-            println!(
-                "Offer account created with {} bytes",
-                offer_account_data.data.len()
-            );
-            let vault_data = litesvm
-                .get_account(&vault)
-                .expect("Failed to get vault account");
-            println!("Vault account created with {} bytes", vault_data.data.len());
-        }
-        Err(error) => {
-            println!("❌ make_offer transaction failed: {:?}", error);
-            panic!("Transaction failed");
-        }
-    }
+
+    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+
+    let offer_account_data = litesvm
+        .get_account(&offer_account)
+        .expect("Failed to get offer account");
+    println!(
+        "Offer account created with {} bytes",
+        offer_account_data.data.len()
+    );
+    let vault_data = litesvm
+        .get_account(&vault)
+        .expect("Failed to get vault account");
+    println!("Vault account created with {} bytes", vault_data.data.len());
 }
 
 #[test]
@@ -236,40 +151,8 @@ fn test_duplicate_offer_id_fails() {
     litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
     litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
 
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82],
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
@@ -279,60 +162,39 @@ fn test_duplicate_offer_id_fails() {
         &bob.pubkey(),
         &token_mint_a.pubkey(),
     );
-    for (owner, mint, ata) in [
-        (&alice, &token_mint_a, &alice_token_account_a),
-        (&bob, &token_mint_a, &bob_token_account_a),
-    ] {
-        let create_associated_token_account_instruction =
-            spl_associated_token_account::instruction::create_associated_token_account(
-                &owner.pubkey(),
-                &owner.pubkey(),
-                &mint.pubkey(),
-                &spl_token::ID,
-            );
-        let message = Message::new(
-            &[create_associated_token_account_instruction],
-            Some(&owner.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[owner], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
+        &token_mint_a.pubkey(),
+        &mint_authority,
+    );
+    let bob_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &bob,
+        &token_mint_a.pubkey(),
+        &mint_authority,
+    );
 
     let token = 1_000_000_000u64;
     let alice_initial_token_a = 10 * token;
     let bob_initial_token_a = 1;
-    let mint_to_instructions = vec![
-        (
-            token_mint_a.pubkey(),
-            alice_token_account_a,
-            alice_initial_token_a,
-        ),
-        (
-            token_mint_a.pubkey(),
-            bob_token_account_a,
-            bob_initial_token_a,
-        ),
-    ];
-    for (mint, ata, amount) in mint_to_instructions {
-        let mint_to_instruction = spl_token::instruction::mint_to(
-            &spl_token::ID,
-            &mint,
-            &ata,
-            &mint_authority.pubkey(),
-            &[],
-            amount,
-        )
-        .unwrap();
-        let message = Message::new(&[mint_to_instruction], Some(&mint_authority.pubkey()));
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
 
-    // Create first offer with Alice
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &alice_token_account_a,
+        alice_initial_token_a,
+        &mint_authority,
+    );
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &bob_token_account_a,
+        bob_initial_token_a,
+        &mint_authority,
+    );
+
     let offer_id = 12345u64;
     let (offer_account, _offer_bump) =
         Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
@@ -370,7 +232,6 @@ fn test_duplicate_offer_id_fails() {
     let result = litesvm.send_transaction(transaction);
     assert!(result.is_ok(), "First offer should succeed");
 
-    // Try to create second offer with Bob using the same offer_id
     let mut instruction_data = instruction_discriminator;
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
