@@ -8,8 +8,8 @@ use std::fs;
 use std::str::FromStr;
 
 use crate::test_helpers::{
-    create_associated_token_account, create_token_mint, deploy_program, get_token_account_balance,
-    mint_tokens_to_account, send_transaction_from_instructions,
+    assert_token_balance, create_associated_token_account, create_token_mint, deploy_program,
+    get_token_account_balance, mint_tokens_to_account, send_transaction_from_instructions,
 };
 
 #[test]
@@ -968,30 +968,29 @@ fn test_take_offer_success() {
         .unwrap();
 
     // Check balances
-    let alice_token_a_balance = get_token_account_balance(&litesvm, &alice_token_account_a);
-    let alice_token_b_balance = get_token_account_balance(&litesvm, &alice_token_account_b);
-    let bob_token_a_balance = get_token_account_balance(&litesvm, &bob_token_account_a);
-    let bob_token_b_balance = get_token_account_balance(&litesvm, &bob_token_account_b);
-
-    assert_eq!(
-        alice_token_a_balance,
+    assert_token_balance(
+        &litesvm,
+        &alice_token_account_a,
         7 * token,
-        "Alice should have 7 token A left"
+        "Alice should have 7 token A left",
     );
-    assert_eq!(
-        alice_token_b_balance,
+    assert_token_balance(
+        &litesvm,
+        &alice_token_account_b,
         2 * token,
-        "Alice should have received 2 token B"
+        "Alice should have received 2 token B",
     );
-    assert_eq!(
-        bob_token_a_balance,
+    assert_token_balance(
+        &litesvm,
+        &bob_token_account_a,
         3 * token,
-        "Bob should have received 3 token A"
+        "Bob should have received 3 token A",
     );
-    assert_eq!(
-        bob_token_b_balance,
+    assert_token_balance(
+        &litesvm,
+        &bob_token_account_b,
         3 * token,
-        "Bob should have 3 token B left"
+        "Bob should have 3 token B left",
     );
 
     // Optionally, check that the offer account is closed or marked as completed
@@ -1086,11 +1085,11 @@ fn test_refund_offer_success() {
         .unwrap();
 
     // Check that Alice's balance decreased after creating the offer
-    let alice_balance_after_offer = get_token_account_balance(&litesvm, &alice_token_account_a);
-    assert_eq!(
-        alice_balance_after_offer,
+    assert_token_balance(
+        &litesvm,
+        &alice_token_account_a,
         7 * token,
-        "Alice should have 7 token A left after creating offer"
+        "Alice should have 7 token A left after creating offer",
     );
 
     // Alice refunds the offer
@@ -1116,11 +1115,11 @@ fn test_refund_offer_success() {
         .unwrap();
 
     // Check that Alice's balance is restored after refunding
-    let alice_balance_after_refund = get_token_account_balance(&litesvm, &alice_token_account_a);
-    assert_eq!(
-        alice_balance_after_refund,
+    assert_token_balance(
+        &litesvm,
+        &alice_token_account_a,
         10 * token,
-        "Alice should have all 10 token A back after refunding"
+        "Alice should have all 10 token A back after refunding",
     );
 
     // Check that the offer account is closed
@@ -1248,12 +1247,11 @@ fn test_non_maker_cannot_refund_offer() {
     );
 
     // Verify that Alice's balance is still the same (offer not refunded)
-    let alice_balance_after_failed_refund =
-        get_token_account_balance(&litesvm, &alice_token_account_a);
-    assert_eq!(
-        alice_balance_after_failed_refund,
+    assert_token_balance(
+        &litesvm,
+        &alice_token_account_a,
         7 * token,
-        "Alice's balance should remain unchanged after failed refund attempt"
+        "Alice's balance should remain unchanged after failed refund attempt",
     );
 
     // Verify that the offer account still exists
