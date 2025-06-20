@@ -123,3 +123,13 @@ pub fn mint_tokens_to_account(
     transaction.sign(&[mint_authority], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 }
+
+pub fn get_token_account_balance(litesvm: &LiteSVM, token_account: &Pubkey) -> u64 {
+    let account = litesvm
+        .get_account(token_account)
+        .expect("Token account not found");
+    let data = &account.data;
+    // SPL Token account layout: amount is at bytes 64..72 (u64, little endian)
+    let amount_bytes = &data[64..72];
+    u64::from_le_bytes(amount_bytes.try_into().expect("Failed to parse amount"))
+}
