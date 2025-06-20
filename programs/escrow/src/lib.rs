@@ -33,3 +33,6 @@ pub mod escrow {
         handlers::refund_offer::refund_offer(context)
     }
 }
+
+#[cfg(test)]
+mod tests;
