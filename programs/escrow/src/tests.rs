@@ -154,15 +154,6 @@ fn test_duplicate_offer_id_fails() {
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
-        &token_mint_a.pubkey(),
-    );
-    let bob_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &bob.pubkey(),
-        &token_mint_a.pubkey(),
-    );
-
     let alice_token_account_a = create_associated_token_account(
         &mut litesvm,
         &alice,
