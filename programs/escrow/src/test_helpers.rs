@@ -8,6 +8,21 @@ use spl_associated_token_account::instruction::create_associated_token_account a
 use spl_token::instruction::mint_to;
 use std::fs;
 
+#[derive(Debug)]
+pub enum TestError {
+    TransactionFailed(String),
+}
+
+impl std::fmt::Display for TestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TestError::TransactionFailed(msg) => write!(f, "Transaction failed: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for TestError {}
+
 pub fn deploy_program(litesvm: &mut LiteSVM, program_id: &Pubkey, program_path: &str) {
     let program_bytes = fs::read(program_path).expect("Failed to read program binary");
     litesvm
@@ -24,17 +39,20 @@ pub fn deploy_program(litesvm: &mut LiteSVM, program_id: &Pubkey, program_path: 
         .expect("Failed to deploy program");
 }
 
-pub fn send_transaction(
+pub fn send_transaction_from_instructions(
     litesvm: &mut LiteSVM,
-    instruction: solana_instruction::Instruction,
+    instructions: Vec<solana_instruction::Instruction>,
     signers: &[&Keypair],
     fee_payer: &Pubkey,
-) {
+) -> Result<(), TestError> {
     let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(fee_payer));
+    let message = Message::new(&instructions, Some(fee_payer));
     let mut transaction = Transaction::new_unsigned(message);
     transaction.sign(signers, recent_blockhash);
-    litesvm.send_transaction(transaction).unwrap();
+    litesvm
+        .send_transaction(transaction)
+        .map(|_| ())
+        .map_err(|e| TestError::TransactionFailed(format!("{:?}", e)))
 }
 
 pub fn create_token_mint(litesvm: &mut LiteSVM, mint_authority: &Keypair, decimals: u8) -> Keypair {

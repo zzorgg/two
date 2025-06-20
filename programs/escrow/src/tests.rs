@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use crate::test_helpers::{
     create_associated_token_account, create_token_mint, deploy_program, get_token_account_balance,
-    mint_tokens_to_account, send_transaction,
+    mint_tokens_to_account, send_transaction_from_instructions,
 };
 
 #[test]
@@ -87,7 +87,7 @@ fn test_make_offer_succeeds() {
     let discriminator_input = b"global:make_offer";
     let instruction_discriminator =
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
+    let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&(1 * token).to_le_bytes()); // token_a_offered_amount
     instruction_data.extend_from_slice(&(1 * token).to_le_bytes()); // token_b_wanted_amount
@@ -108,19 +108,32 @@ fn test_make_offer_succeeds() {
         data: instruction_data,
     };
 
-    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
+        .unwrap();
 
-    let offer_account_data = litesvm
-        .get_account(&offer_account)
-        .expect("Failed to get offer account");
-    println!(
-        "Offer account created with {} bytes",
-        offer_account_data.data.len()
-    );
-    let vault_data = litesvm
-        .get_account(&vault)
-        .expect("Failed to get vault account");
-    println!("Vault account created with {} bytes", vault_data.data.len());
+    let mut instruction_data = instruction_discriminator.clone();
+    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    instruction_data.extend_from_slice(&(1 * token).to_le_bytes());
+    let account_metas = vec![
+        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
+        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
+        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
+        solana_instruction::AccountMeta::new(bob.pubkey(), true),
+        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
+        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
+        solana_instruction::AccountMeta::new(bob_token_account_a, false),
+        solana_instruction::AccountMeta::new(offer_account, false),
+        solana_instruction::AccountMeta::new(vault, false),
+    ];
+    let instruction = solana_instruction::Instruction {
+        program_id,
+        accounts: account_metas,
+        data: instruction_data,
+    };
+    let result =
+        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
+    assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
 #[test]
@@ -216,11 +229,12 @@ fn test_duplicate_offer_id_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&alice.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&alice], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
     assert!(result.is_ok(), "First offer should succeed");
 
     let mut instruction_data = instruction_discriminator;
@@ -243,11 +257,8 @@ fn test_duplicate_offer_id_fails() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&bob.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&bob], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result =
+        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
     assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
@@ -902,7 +913,7 @@ fn test_take_offer_success() {
     let discriminator_input = b"global:make_offer";
     let instruction_discriminator =
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
+    let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
     instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
@@ -922,7 +933,8 @@ fn test_take_offer_success() {
         accounts: account_metas,
         data: instruction_data,
     };
-    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
+        .unwrap();
 
     // Bob takes the offer
     let discriminator_input = b"global:take_offer";
@@ -948,7 +960,8 @@ fn test_take_offer_success() {
         accounts: account_metas,
         data: instruction_data,
     };
-    send_transaction(&mut litesvm, instruction, &[&bob], &bob.pubkey());
+    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey())
+        .unwrap();
 
     // Check balances
     let alice_token_a_balance = get_token_account_balance(&litesvm, &alice_token_account_a);
@@ -1045,7 +1058,7 @@ fn test_refund_offer_success() {
     let discriminator_input = b"global:make_offer";
     let instruction_discriminator =
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
+    let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
     instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
@@ -1065,7 +1078,8 @@ fn test_refund_offer_success() {
         accounts: account_metas,
         data: instruction_data,
     };
-    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
+        .unwrap();
 
     // Check that Alice's balance decreased after creating the offer
     let alice_balance_after_offer = get_token_account_balance(&litesvm, &alice_token_account_a);
@@ -1094,7 +1108,8 @@ fn test_refund_offer_success() {
         accounts: account_metas,
         data: instruction_data,
     };
-    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
+        .unwrap();
 
     // Check that Alice's balance is restored after refunding
     let alice_balance_after_refund = get_token_account_balance(&litesvm, &alice_token_account_a);
@@ -1174,7 +1189,7 @@ fn test_non_maker_cannot_refund_offer() {
     let discriminator_input = b"global:make_offer";
     let instruction_discriminator =
         anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
+    let mut instruction_data = instruction_discriminator.clone();
     instruction_data.extend_from_slice(&offer_id.to_le_bytes());
     instruction_data.extend_from_slice(&(3 * token).to_le_bytes()); // token_a_offered_amount
     instruction_data.extend_from_slice(&(2 * token).to_le_bytes()); // token_b_wanted_amount
@@ -1194,7 +1209,13 @@ fn test_non_maker_cannot_refund_offer() {
         accounts: account_metas,
         data: instruction_data,
     };
-    send_transaction(&mut litesvm, instruction, &[&alice], &alice.pubkey());
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![instruction],
+        &[&alice],
+        &alice.pubkey(),
+    );
+    assert!(result.is_ok(), "Alice's offer should succeed");
 
     // Bob tries to refund Alice's offer (should fail)
     let discriminator_input = b"global:refund_offer";
@@ -1215,11 +1236,8 @@ fn test_non_maker_cannot_refund_offer() {
         accounts: account_metas,
         data: instruction_data,
     };
-    let recent_blockhash = litesvm.latest_blockhash();
-    let message = Message::new(&[instruction], Some(&bob.pubkey()));
-    let mut transaction = Transaction::new_unsigned(message);
-    transaction.sign(&[&bob], recent_blockhash);
-    let result = litesvm.send_transaction(transaction);
+    let result =
+        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
     assert!(
         result.is_err(),
         "Non-maker should not be able to refund an offer"
