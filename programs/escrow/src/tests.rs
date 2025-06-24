@@ -4,11 +4,11 @@ use solana_message::Message;
 use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
-use std::str::FromStr;
 
 use crate::escrow_test_helpers::{
     build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
-    setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts, TOKEN_A, TOKEN_B,
+    get_program_id, setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts,
+    TOKEN_A, TOKEN_B,
 };
 use crate::test_helpers::{
     assert_token_balance, create_associated_token_account, create_token_mint, create_wallet,
@@ -18,7 +18,7 @@ use crate::test_helpers::{
 #[test]
 fn test_make_offer_succeeds() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
 
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
@@ -82,62 +82,67 @@ fn test_make_offer_succeeds() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
 
-    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
-        .unwrap();
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A, // token_a_offered_amount
+        1 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts,
+    );
 
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(bob.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(bob_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    send_transaction_from_instructions(
+        &mut litesvm,
+        vec![make_offer_instruction],
+        &[&alice],
+        &alice.pubkey(),
+    )
+    .unwrap();
+
+    // Try to create a second offer with the same ID (should fail)
+    let make_offer_accounts_2 = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: bob.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: bob_token_account_a,
+        offer_account,
+        vault,
     };
-    let result =
-        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
+
+    let make_offer_instruction_2 = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A, // token_a_offered_amount
+        1 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts_2,
+    );
+
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![make_offer_instruction_2],
+        &[&bob],
+        &bob.pubkey(),
+    );
     assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
 #[test]
 fn test_duplicate_offer_id_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -186,66 +191,67 @@ fn test_duplicate_offer_id_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A, // token_a_offered_amount
+        1 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
     assert!(result.is_ok(), "First offer should succeed");
 
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(bob.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(bob_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    // Try to create a second offer with the same ID (should fail)
+    let make_offer_accounts_2 = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: bob.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: bob_token_account_a,
+        offer_account,
+        vault,
     };
-    let result =
-        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
+
+    let make_offer_instruction_2 = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A, // token_a_offered_amount
+        1 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts_2,
+    );
+
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![make_offer_instruction_2],
+        &[&bob],
+        &bob.pubkey(),
+    );
     assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
 #[test]
 fn test_insufficient_funds_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -333,32 +339,29 @@ fn test_insufficient_funds_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1000 * TOKEN_A).to_le_bytes()); // Try to offer 1000 tokens (Alice only has 10)
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        1000 * TOKEN_A, // Try to offer 1000 tokens (Alice only has 10)
+        1 * TOKEN_B,
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
@@ -368,7 +371,7 @@ fn test_insufficient_funds_fails() {
 #[test]
 fn test_same_token_mints_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -453,32 +456,25 @@ fn test_same_token_mints_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false), // Same mint for both
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_a.pubkey(), // Same mint for both
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction =
+        build_make_offer_instruction(offer_id, 1 * TOKEN_A, 1 * TOKEN_B, make_offer_accounts);
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
@@ -488,7 +484,7 @@ fn test_same_token_mints_fails() {
 #[test]
 fn test_zero_token_b_wanted_amount_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -576,32 +572,29 @@ fn test_zero_token_b_wanted_amount_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&0u64.to_le_bytes()); // Zero wanted amount
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A,
+        0, // Zero wanted amount
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
@@ -614,7 +607,7 @@ fn test_zero_token_b_wanted_amount_fails() {
 #[test]
 fn test_zero_token_a_offered_amount_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -702,32 +695,29 @@ fn test_zero_token_a_offered_amount_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&0u64.to_le_bytes()); // Zero offered amount
-    instruction_data.extend_from_slice(&(1 * TOKEN_B).to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        0, // Zero offered amount
+        1 * TOKEN_B,
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
@@ -840,73 +830,50 @@ fn test_take_offer_success() {
 
 #[test]
 fn test_refund_offer_success() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-
-    // Create mints
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    // Create token accounts
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-
-    // Mint tokens to Alice
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 77777u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = Pubkey::find_program_address(
+        &[b"offer", &offer_id.to_le_bytes()],
+        &test_environment.program_id,
+    );
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(3 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(2 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
+        offer_account,
+        vault,
     };
-    send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&alice], &alice.pubkey())
-        .unwrap();
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        3 * TOKEN_A, // token_a_offered_amount
+        2 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts,
+    );
+
+    send_transaction_from_instructions(
+        &mut test_environment.litesvm,
+        vec![make_offer_instruction],
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
+    )
+    .unwrap();
 
     // Check that Alice's balance decreased after creating the offer
     assert_token_balance(
-        &litesvm,
-        &alice_token_account_a,
+        &test_environment.litesvm,
+        &test_environment.alice_token_account_a,
         7 * TOKEN_A,
         "Alice should have 7 token A left after creating offer",
     );
@@ -915,32 +882,32 @@ fn test_refund_offer_success() {
     let refund_offer_accounts = RefundOfferAccounts {
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
 
     let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
     send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![refund_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     )
     .unwrap();
 
     // Check that Alice's balance is restored after refunding
     assert_token_balance(
-        &litesvm,
-        &alice_token_account_a,
+        &test_environment.litesvm,
+        &test_environment.alice_token_account_a,
         10 * TOKEN_A,
         "Alice should have all 10 token A back after refunding",
     );
 
     // Check that the offer account is closed
-    let offer_account_data = litesvm.get_account(&offer_account);
+    let offer_account_data = test_environment.litesvm.get_account(&offer_account);
     assert!(
         offer_account_data.is_none() || offer_account_data.unwrap().data.is_empty(),
         "Offer account should be closed after refund"
@@ -949,72 +916,43 @@ fn test_refund_offer_success() {
 
 #[test]
 fn test_non_maker_cannot_refund_offer() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-    let bob = create_wallet(&mut litesvm, 1_000_000_000);
-
-    // Create mints
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    // Create token accounts
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-
-    // Mint tokens to Alice
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 88888u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = Pubkey::find_program_address(
+        &[b"offer", &offer_id.to_le_bytes()],
+        &test_environment.program_id,
+    );
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator.clone();
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(3 * TOKEN_A).to_le_bytes()); // token_a_offered_amount
-    instruction_data.extend_from_slice(&(2 * TOKEN_B).to_le_bytes()); // token_b_wanted_amount
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        3 * TOKEN_A, // token_a_offered_amount
+        2 * TOKEN_B, // token_b_wanted_amount
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
-        &mut litesvm,
-        vec![instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &mut test_environment.litesvm,
+        vec![make_offer_instruction],
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(result.is_ok(), "Alice's offer should succeed");
 
@@ -1022,19 +960,19 @@ fn test_non_maker_cannot_refund_offer() {
     let refund_offer_accounts = RefundOfferAccounts {
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: bob.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.bob.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
 
     let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![refund_instruction],
-        &[&bob],
-        &bob.pubkey(),
+        &[&test_environment.bob],
+        &test_environment.bob.pubkey(),
     );
     assert!(
         result.is_err(),
@@ -1043,14 +981,14 @@ fn test_non_maker_cannot_refund_offer() {
 
     // Verify that Alice's balance is still the same (offer not refunded)
     assert_token_balance(
-        &litesvm,
-        &alice_token_account_a,
+        &test_environment.litesvm,
+        &test_environment.alice_token_account_a,
         7 * TOKEN_A,
         "Alice's balance should remain unchanged after failed refund attempt",
     );
 
     // Verify that the offer account still exists
-    let offer_account_data = litesvm.get_account(&offer_account);
+    let offer_account_data = test_environment.litesvm.get_account(&offer_account);
     assert!(
         offer_account_data.is_some() && !offer_account_data.unwrap().data.is_empty(),
         "Offer account should still exist after failed refund attempt"
@@ -1060,7 +998,7 @@ fn test_non_maker_cannot_refund_offer() {
 #[test]
 fn test_take_offer_insufficient_funds_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
+    let program_id = get_program_id();
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
@@ -1193,63 +1131,57 @@ fn test_take_offer_insufficient_funds_fails() {
         &offer_account,
         &token_mint_a.pubkey(),
     );
-    let discriminator_input = b"global:make_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let mut instruction_data = instruction_discriminator;
-    instruction_data.extend_from_slice(&offer_id.to_le_bytes());
-    instruction_data.extend_from_slice(&(1 * TOKEN_A).to_le_bytes());
-    instruction_data.extend_from_slice(&large_token_b_amount.to_le_bytes());
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(alice.pubkey(), true),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(alice_token_account_a, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+
+    let make_offer_accounts = MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        maker_token_account_a: alice_token_account_a,
+        offer_account,
+        vault,
     };
+
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        1 * TOKEN_A,
+        large_token_b_amount,
+        make_offer_accounts,
+    );
+
     let result = send_transaction_from_instructions(
         &mut litesvm,
-        vec![instruction],
+        vec![make_offer_instruction],
         &[&alice],
         &alice.pubkey(),
     );
     assert!(result.is_ok(), "Alice's offer should succeed");
 
     // Try to take the offer with Bob who has insufficient token B
-    let discriminator_input = b"global:take_offer";
-    let instruction_discriminator =
-        anchor_lang::solana_program::hash::hash(discriminator_input).to_bytes()[..8].to_vec();
-    let instruction_data = instruction_discriminator;
-    let account_metas = vec![
-        solana_instruction::AccountMeta::new_readonly(spl_associated_token_account::ID, false),
-        solana_instruction::AccountMeta::new_readonly(spl_token::ID, false),
-        solana_instruction::AccountMeta::new_readonly(anchor_lang::system_program::ID, false),
-        solana_instruction::AccountMeta::new(bob.pubkey(), true),
-        solana_instruction::AccountMeta::new(alice.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_a.pubkey(), false),
-        solana_instruction::AccountMeta::new_readonly(token_mint_b.pubkey(), false),
-        solana_instruction::AccountMeta::new(bob_token_account_a, false),
-        solana_instruction::AccountMeta::new(bob_token_account_b, false),
-        solana_instruction::AccountMeta::new(alice_token_account_b, false),
-        solana_instruction::AccountMeta::new(offer_account, false),
-        solana_instruction::AccountMeta::new(vault, false),
-    ];
-    let instruction = solana_instruction::Instruction {
-        program_id,
-        accounts: account_metas,
-        data: instruction_data,
+    let take_offer_accounts = TakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        taker: bob.pubkey(),
+        maker: alice.pubkey(),
+        token_mint_a: token_mint_a.pubkey(),
+        token_mint_b: token_mint_b.pubkey(),
+        taker_token_account_a: bob_token_account_a,
+        taker_token_account_b: bob_token_account_b,
+        maker_token_account_b: alice_token_account_b,
+        offer_account,
+        vault,
     };
-    let result =
-        send_transaction_from_instructions(&mut litesvm, vec![instruction], &[&bob], &bob.pubkey());
+
+    let take_offer_instruction = build_take_offer_instruction(take_offer_accounts);
+    let result = send_transaction_from_instructions(
+        &mut litesvm,
+        vec![take_offer_instruction],
+        &[&bob],
+        &bob.pubkey(),
+    );
     assert!(
         result.is_err(),
         "Take offer with insufficient funds should fail"
