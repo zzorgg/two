@@ -16,9 +16,11 @@ pub enum TestError {
 }
 
 impl std::fmt::Display for TestError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestError::TransactionFailed(msg) => write!(f, "Transaction failed: {}", msg),
+            TestError::TransactionFailed(message) => {
+                write!(formatter, "Transaction failed: {}", message)
+            }
         }
     }
 }
