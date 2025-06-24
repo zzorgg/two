@@ -12,8 +12,8 @@ use crate::escrow_test_helpers::{
     setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts, TOKEN_A, TOKEN_B,
 };
 use crate::test_helpers::{
-    assert_token_balance, create_associated_token_account, create_token_mint, deploy_program,
-    mint_tokens_to_account, send_transaction_from_instructions,
+    assert_token_balance, create_associated_token_account, create_token_mint, create_wallet,
+    create_wallets, deploy_program, mint_tokens_to_account, send_transaction_from_instructions,
 };
 
 #[test]
@@ -23,14 +23,10 @@ fn test_make_offer_succeeds() {
 
     deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    let bob = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let [alice, bob] = create_wallets(&mut litesvm, 2, 1_000_000_000)
+        .try_into()
         .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
-    litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
 
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
@@ -158,14 +154,10 @@ fn test_duplicate_offer_id_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    let bob = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let [alice, bob] = create_wallets(&mut litesvm, 2, 1_000_000_000)
+        .try_into()
         .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
-    litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
 
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
@@ -283,12 +275,8 @@ fn test_insufficient_funds_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
     let token_mint_a = Keypair::new();
     let token_mint_b = Keypair::new();
@@ -423,12 +411,8 @@ fn test_same_token_mints_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
     let token_mint_a = Keypair::new();
     let decimals = 9u8;
@@ -560,12 +544,8 @@ fn test_zero_token_b_wanted_amount_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
     let token_mint_a = Keypair::new();
     let token_mint_b = Keypair::new();
@@ -703,12 +683,8 @@ fn test_zero_token_a_offered_amount_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
     let token_mint_a = Keypair::new();
     let token_mint_b = Keypair::new();
@@ -947,12 +923,9 @@ fn test_refund_offer_success() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
+    let bob = create_wallet(&mut litesvm, 1_000_000_000);
 
     // Create mints
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
@@ -1073,14 +1046,9 @@ fn test_non_maker_cannot_refund_offer() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    let bob = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
-    litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
+    let bob = create_wallet(&mut litesvm, 1_000_000_000);
 
     // Create mints
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
@@ -1201,14 +1169,9 @@ fn test_take_offer_insufficient_funds_fails() {
         )
         .expect("Failed to deploy program");
 
-    let mint_authority = Keypair::new();
-    let alice = Keypair::new();
-    let bob = Keypair::new();
-    litesvm
-        .airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    litesvm.airdrop(&alice.pubkey(), 1_000_000_000).unwrap();
-    litesvm.airdrop(&bob.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
+    let alice = create_wallet(&mut litesvm, 1_000_000_000);
+    let bob = create_wallet(&mut litesvm, 1_000_000_000);
 
     let token_mint_a = Keypair::new();
     let token_mint_b = Keypair::new();

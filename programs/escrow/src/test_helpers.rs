@@ -161,3 +161,17 @@ pub fn assert_token_balance(
     let actual_balance = get_token_account_balance(litesvm, token_account);
     assert_eq!(actual_balance, expected_balance, "{}", message);
 }
+
+pub fn create_wallet(litesvm: &mut LiteSVM, airdrop_amount: u64) -> Keypair {
+    let wallet = Keypair::new();
+    litesvm
+        .airdrop(&wallet.pubkey(), airdrop_amount)
+        .expect("Failed to airdrop to wallet");
+    wallet
+}
+
+pub fn create_wallets(litesvm: &mut LiteSVM, count: usize, airdrop_amount: u64) -> Vec<Keypair> {
+    (0..count)
+        .map(|_| create_wallet(litesvm, airdrop_amount))
+        .collect()
+}
