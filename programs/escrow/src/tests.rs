@@ -4,7 +4,6 @@ use solana_message::Message;
 use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
-use std::fs;
 use std::str::FromStr;
 
 use crate::escrow_test_helpers::{
@@ -138,21 +137,8 @@ fn test_make_offer_succeeds() {
 #[test]
 fn test_duplicate_offer_id_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let [alice, bob] = create_wallets(&mut litesvm, 2, 1_000_000_000)
@@ -259,21 +245,8 @@ fn test_duplicate_offer_id_fails() {
 #[test]
 fn test_insufficient_funds_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
@@ -395,21 +368,8 @@ fn test_insufficient_funds_fails() {
 #[test]
 fn test_same_token_mints_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
@@ -528,21 +488,8 @@ fn test_same_token_mints_fails() {
 #[test]
 fn test_zero_token_b_wanted_amount_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
@@ -667,21 +614,8 @@ fn test_zero_token_b_wanted_amount_fails() {
 #[test]
 fn test_zero_token_a_offered_amount_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
@@ -907,25 +841,11 @@ fn test_take_offer_success() {
 #[test]
 fn test_refund_offer_success() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
-    let bob = create_wallet(&mut litesvm, 1_000_000_000);
 
     // Create mints
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
@@ -1030,21 +950,8 @@ fn test_refund_offer_success() {
 #[test]
 fn test_non_maker_cannot_refund_offer() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
@@ -1153,21 +1060,8 @@ fn test_non_maker_cannot_refund_offer() {
 #[test]
 fn test_take_offer_insufficient_funds_fails() {
     let mut litesvm = LiteSVM::new();
-    let program_bytes =
-        fs::read("../../target/deploy/escrow.so").expect("Failed to read program binary");
     let program_id = Pubkey::from_str("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y").unwrap();
-    litesvm
-        .set_account(
-            program_id,
-            solana_account::Account {
-                lamports: litesvm.minimum_balance_for_rent_exemption(program_bytes.len()),
-                data: program_bytes,
-                owner: solana_program::bpf_loader::ID,
-                executable: true,
-                rent_epoch: 0,
-            },
-        )
-        .expect("Failed to deploy program");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
 
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
