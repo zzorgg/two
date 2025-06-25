@@ -168,6 +168,16 @@ pub fn assert_token_balance(
     assert_eq!(actual_balance, expected_balance, "{}", message);
 }
 
+/// Verifies that an account is closed (either doesn't exist or has empty data)
+pub fn check_account_is_closed(litesvm: &LiteSVM, account: &Pubkey, message: &str) {
+    let account_data = litesvm.get_account(account);
+    assert!(
+        account_data.is_none() || account_data.unwrap().data.is_empty(),
+        "{}",
+        message
+    );
+}
+
 pub fn create_wallet(litesvm: &mut LiteSVM, airdrop_amount: u64) -> Keypair {
     let wallet = Keypair::new();
     litesvm

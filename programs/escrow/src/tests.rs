@@ -1,14 +1,13 @@
-use litesvm::LiteSVM;
 use solana_signer::Signer;
 
 use crate::escrow_test_helpers::{
     build_make_offer_accounts, build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
-    get_program_id, setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts,
+    execute_make_offer, execute_take_offer, execute_refund_offer,
+    setup_escrow_test, RefundOfferAccounts, TakeOfferAccounts,
     TOKEN_A, TOKEN_B,
 };
 use crate::test_helpers::{
-    assert_token_balance, create_associated_token_account, create_token_mint, create_wallet,
-    create_wallets, deploy_program, get_pda_and_bump, mint_tokens_to_account, send_transaction_from_instructions,
+    assert_token_balance, check_account_is_closed, get_pda_and_bump, send_transaction_from_instructions,
 };
 use crate::seeds;
 
@@ -288,60 +287,32 @@ fn test_take_offer_success() {
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 55555u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
-    let vault = spl_associated_token_account::get_associated_token_address(
-        &offer_account,
-        &test_environment.token_mint_a.pubkey(),
-    );
-
-    let make_offer_accounts = build_make_offer_accounts(
-        test_environment.alice.pubkey(),
-        test_environment.token_mint_a.pubkey(),
-        test_environment.token_mint_b.pubkey(),
-        test_environment.alice_token_account_a,
-        offer_account,
-        vault,
-    );
-
-    let make_offer_instruction = build_make_offer_instruction(
+    let alice = test_environment.alice.insecure_clone();
+    let alice_token_account_a = test_environment.alice_token_account_a;
+    let (offer_account, vault) = execute_make_offer(
+        &mut test_environment,
         offer_id,
+        &alice,
+        alice_token_account_a,
         3 * TOKEN_A,
         2 * TOKEN_B,
-        make_offer_accounts,
-    );
-
-    send_transaction_from_instructions(
-        &mut test_environment.litesvm,
-        vec![make_offer_instruction],
-        &[&test_environment.alice],
-        &test_environment.alice.pubkey(),
-    )
-    .unwrap();
+    ).unwrap();
 
     // Bob takes the offer
-    let take_offer_accounts = TakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        taker: test_environment.bob.pubkey(),
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        taker_token_account_a: test_environment.bob_token_account_a,
-        taker_token_account_b: test_environment.bob_token_account_b,
-        maker_token_account_b: test_environment.alice_token_account_b,
+    let bob = test_environment.bob.insecure_clone();
+    let bob_token_account_a = test_environment.bob_token_account_a;
+    let bob_token_account_b = test_environment.bob_token_account_b;
+    let alice_token_account_b = test_environment.alice_token_account_b;
+    execute_take_offer(
+        &mut test_environment,
+        &bob,
+        &alice,
+        bob_token_account_a,
+        bob_token_account_b,
+        alice_token_account_b,
         offer_account,
         vault,
-    };
-
-    let take_offer_instruction = build_take_offer_instruction(take_offer_accounts);
-    send_transaction_from_instructions(
-        &mut test_environment.litesvm,
-        vec![take_offer_instruction],
-        &[&test_environment.bob],
-        &test_environment.bob.pubkey(),
-    )
-    .unwrap();
+    ).unwrap();
 
     // Check balances
     assert_token_balance(
@@ -369,11 +340,11 @@ fn test_take_offer_success() {
         "Bob should have 3 token B left",
     );
 
-    // Optionally, check that the offer account is closed or marked as completed
-    let offer_account_data = test_environment.litesvm.get_account(&offer_account);
-    assert!(
-        offer_account_data.is_none() || offer_account_data.unwrap().data.is_empty(),
-        "Offer account should be closed or empty after being taken"
+    // Check that the offer account is closed after being taken
+    check_account_is_closed(
+        &test_environment.litesvm,
+        &offer_account,
+        "Offer account should be closed after being taken"
     );
 }
 
@@ -383,35 +354,16 @@ fn test_refund_offer_success() {
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 77777u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
-    let vault = spl_associated_token_account::get_associated_token_address(
-        &offer_account,
-        &test_environment.token_mint_a.pubkey(),
-    );
-
-    let make_offer_accounts = build_make_offer_accounts(
-        test_environment.alice.pubkey(),
-        test_environment.token_mint_a.pubkey(),
-        test_environment.token_mint_b.pubkey(),
-        test_environment.alice_token_account_a,
-        offer_account,
-        vault,
-    );
-
-    let make_offer_instruction = build_make_offer_instruction(
+    let alice = test_environment.alice.insecure_clone();
+    let alice_token_account_a = test_environment.alice_token_account_a;
+    let (offer_account, vault) = execute_make_offer(
+        &mut test_environment,
         offer_id,
+        &alice,
+        alice_token_account_a,
         3 * TOKEN_A,
         2 * TOKEN_B,
-        make_offer_accounts,
-    );
-
-    send_transaction_from_instructions(
-        &mut test_environment.litesvm,
-        vec![make_offer_instruction],
-        &[&test_environment.alice],
-        &test_environment.alice.pubkey(),
-    )
-    .unwrap();
+    ).unwrap();
 
     // Check that Alice's balance decreased after creating the offer
     assert_token_balance(
@@ -422,24 +374,13 @@ fn test_refund_offer_success() {
     );
 
     // Alice refunds the offer
-    let refund_offer_accounts = RefundOfferAccounts {
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    execute_refund_offer(
+        &mut test_environment,
+        &alice,
+        alice_token_account_a,
         offer_account,
         vault,
-    };
-
-    let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
-    send_transaction_from_instructions(
-        &mut test_environment.litesvm,
-        vec![refund_instruction],
-        &[&test_environment.alice],
-        &test_environment.alice.pubkey(),
-    )
-    .unwrap();
+    ).unwrap();
 
     // Check that Alice's balance is restored after refunding
     assert_token_balance(
@@ -450,9 +391,9 @@ fn test_refund_offer_success() {
     );
 
     // Check that the offer account is closed
-    let offer_account_data = test_environment.litesvm.get_account(&offer_account);
-    assert!(
-        offer_account_data.is_none() || offer_account_data.unwrap().data.is_empty(),
+    check_account_is_closed(
+        &test_environment.litesvm,
+        &offer_account,
         "Offer account should be closed after refund"
     );
 }
@@ -524,7 +465,7 @@ fn test_non_maker_cannot_refund_offer() {
         "Alice's balance should remain unchanged after failed refund attempt",
     );
 
-    // Verify that the offer account still exists
+    // Verify that the offer account still exists (invert the check)
     let offer_account_data = test_environment.litesvm.get_account(&offer_account);
     assert!(
         offer_account_data.is_some() && !offer_account_data.unwrap().data.is_empty(),

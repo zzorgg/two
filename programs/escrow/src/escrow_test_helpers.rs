@@ -1,6 +1,8 @@
 use crate::test_helpers::{
     create_associated_token_account, create_token_mint, deploy_program, mint_tokens_to_account,
+    send_transaction_from_instructions, get_pda_and_bump,
 };
+use crate::seeds;
 use litesvm::LiteSVM;
 use solana_instruction::AccountMeta;
 use solana_instruction::Instruction;
@@ -328,4 +330,116 @@ pub fn build_refund_offer_instruction(accounts: RefundOfferAccounts) -> Instruct
         accounts: account_metas,
         data: instruction_data,
     }
+}
+
+/// Executes a complete make_offer flow: creates PDAs, builds accounts, and executes instruction
+///
+/// This helper eliminates the repetitive pattern of creating offer_account and vault PDAs,
+/// building MakeOfferAccounts, and executing the make_offer instruction that appears in
+/// multiple tests.
+pub fn execute_make_offer(
+    test_env: &mut EscrowTestEnvironment,
+    offer_id: u64,
+    maker: &Keypair,
+    maker_token_account_a: Pubkey,
+    token_a_offered_amount: u64,
+    token_b_wanted_amount: u64,
+) -> Result<(Pubkey, Pubkey), crate::test_helpers::TestError> {
+    // Create PDAs
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_env.program_id);
+    let vault = spl_associated_token_account::get_associated_token_address(
+        &offer_account,
+        &test_env.token_mint_a.pubkey(),
+    );
+
+    // Build accounts
+    let make_offer_accounts = build_make_offer_accounts(
+        maker.pubkey(),
+        test_env.token_mint_a.pubkey(),
+        test_env.token_mint_b.pubkey(),
+        maker_token_account_a,
+        offer_account,
+        vault,
+    );
+
+    // Build and execute instruction
+    let make_offer_instruction = build_make_offer_instruction(
+        offer_id,
+        token_a_offered_amount,
+        token_b_wanted_amount,
+        make_offer_accounts,
+    );
+
+    send_transaction_from_instructions(
+        &mut test_env.litesvm,
+        vec![make_offer_instruction],
+        &[maker],
+        &maker.pubkey(),
+    )?;
+
+    Ok((offer_account, vault))
+}
+
+/// Executes a complete take_offer flow: builds accounts and executes instruction
+pub fn execute_take_offer(
+    test_env: &mut EscrowTestEnvironment,
+    taker: &Keypair,
+    maker: &Keypair,
+    taker_token_account_a: Pubkey,
+    taker_token_account_b: Pubkey,
+    maker_token_account_b: Pubkey,
+    offer_account: Pubkey,
+    vault: Pubkey,
+) -> Result<(), crate::test_helpers::TestError> {
+    let take_offer_accounts = TakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        taker: taker.pubkey(),
+        maker: maker.pubkey(),
+        token_mint_a: test_env.token_mint_a.pubkey(),
+        token_mint_b: test_env.token_mint_b.pubkey(),
+        taker_token_account_a,
+        taker_token_account_b,
+        maker_token_account_b,
+        offer_account,
+        vault,
+    };
+
+    let take_offer_instruction = build_take_offer_instruction(take_offer_accounts);
+    
+    send_transaction_from_instructions(
+        &mut test_env.litesvm,
+        vec![take_offer_instruction],
+        &[taker],
+        &taker.pubkey(),
+    )
+}
+
+/// Executes a complete refund_offer flow: builds accounts and executes instruction
+pub fn execute_refund_offer(
+    test_env: &mut EscrowTestEnvironment,
+    maker: &Keypair,
+    maker_token_account_a: Pubkey,
+    offer_account: Pubkey,
+    vault: Pubkey,
+) -> Result<(), crate::test_helpers::TestError> {
+    let refund_offer_accounts = RefundOfferAccounts {
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker: maker.pubkey(),
+        token_mint_a: test_env.token_mint_a.pubkey(),
+        maker_token_account_a,
+        offer_account,
+        vault,
+    };
+
+    let refund_instruction = build_refund_offer_instruction(refund_offer_accounts);
+    
+    send_transaction_from_instructions(
+        &mut test_env.litesvm,
+        vec![refund_instruction],
+        &[maker],
+        &maker.pubkey(),
+    )
 }
