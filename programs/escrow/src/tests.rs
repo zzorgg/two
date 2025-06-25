@@ -50,8 +50,7 @@ fn test_make_offer_succeeds() {
     )
     .unwrap();
 
-    // Try to create a second offer with the same ID (should fail)
-    let make_offer_accounts_2 = MakeOfferAccounts {
+    let make_offer_accounts_with_existing_offer_id = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
@@ -63,16 +62,16 @@ fn test_make_offer_succeeds() {
         vault,
     };
 
-    let make_offer_instruction_2 = build_make_offer_instruction(
+    let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
         1 * TOKEN_A, // token_a_offered_amount
         1 * TOKEN_B, // token_b_wanted_amount
-        make_offer_accounts_2,
+        make_offer_accounts_with_existing_offer_id,
     );
 
     let result = send_transaction_from_instructions(
         &mut test_environment.litesvm,
-        vec![make_offer_instruction_2],
+        vec![make_offer_instruction_with_existing_offer_id],
         &[&test_environment.bob],
         &test_environment.bob.pubkey(),
     );
@@ -117,8 +116,7 @@ fn test_duplicate_offer_id_fails() {
     );
     assert!(result.is_ok(), "First offer should succeed");
 
-    // Try to create a second offer with the same ID (should fail)
-    let make_offer_accounts_2 = MakeOfferAccounts {
+    let make_offer_accounts_with_existing_offer_id = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
@@ -130,16 +128,16 @@ fn test_duplicate_offer_id_fails() {
         vault,
     };
 
-    let make_offer_instruction_2 = build_make_offer_instruction(
+    let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
         1 * TOKEN_A, // token_a_offered_amount
         1 * TOKEN_B, // token_b_wanted_amount
-        make_offer_accounts_2,
+        make_offer_accounts_with_existing_offer_id,
     );
 
     let result = send_transaction_from_instructions(
         &mut test_environment.litesvm,
-        vec![make_offer_instruction_2],
+        vec![make_offer_instruction_with_existing_offer_id],
         &[&test_environment.bob],
         &test_environment.bob.pubkey(),
     );
