@@ -14,79 +14,23 @@ use crate::seeds;
 
 #[test]
 fn test_make_offer_succeeds() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let [alice, bob] = create_wallets(&mut litesvm, 2, 1_000_000_000)
-        .try_into()
-        .unwrap();
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-    let bob_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &bob,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-    let bob_token_account_b = create_associated_token_account(
-        &mut litesvm,
-        &bob,
-        &token_mint_b.pubkey(),
-        &mint_authority,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    let bob_initial_token_a = 1;
-    let bob_initial_token_b = 1 * TOKEN_B;
-
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &bob_token_account_a,
-        bob_initial_token_a,
-        &mint_authority,
-    );
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_b.pubkey(),
-        &bob_token_account_b,
-        bob_initial_token_b,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -99,10 +43,10 @@ fn test_make_offer_succeeds() {
     );
 
     send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     )
     .unwrap();
 
@@ -111,10 +55,10 @@ fn test_make_offer_succeeds() {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: bob.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: bob_token_account_a,
+        maker: test_environment.bob.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.bob_token_account_a,
         offer_account,
         vault,
     };
@@ -127,74 +71,33 @@ fn test_make_offer_succeeds() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction_2],
-        &[&bob],
-        &bob.pubkey(),
+        &[&test_environment.bob],
+        &test_environment.bob.pubkey(),
     );
     assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
 #[test]
 fn test_duplicate_offer_id_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let [alice, bob] = create_wallets(&mut litesvm, 2, 1_000_000_000)
-        .try_into()
-        .unwrap();
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-    let bob_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &bob,
-        &token_mint_a.pubkey(),
-        &mint_authority,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    let bob_initial_token_a = 1;
-
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &bob_token_account_a,
-        bob_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -207,10 +110,10 @@ fn test_duplicate_offer_id_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(result.is_ok(), "First offer should succeed");
 
@@ -219,10 +122,10 @@ fn test_duplicate_offer_id_fails() {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: bob.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: bob_token_account_a,
+        maker: test_environment.bob.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.bob_token_account_a,
         offer_account,
         vault,
     };
@@ -235,58 +138,34 @@ fn test_duplicate_offer_id_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction_2],
-        &[&bob],
-        &bob.pubkey(),
+        &[&test_environment.bob],
+        &test_environment.bob.pubkey(),
     );
     assert!(result.is_err(), "Second offer with same ID should fail");
 }
 
 #[test]
 fn test_insufficient_funds_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &alice,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Try to create offer with more tokens than Alice owns
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -299,57 +178,34 @@ fn test_insufficient_funds_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(result.is_err(), "Offer with insufficient funds should fail");
 }
 
 #[test]
 fn test_same_token_mints_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &alice,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Try to create offer with same token mint for both token_a and token_b
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_a.pubkey(), // Same mint for both
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_a.pubkey(), // Same mint for both
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -358,58 +214,34 @@ fn test_same_token_mints_fails() {
         build_make_offer_instruction(offer_id, 1 * TOKEN_A, 1 * TOKEN_B, make_offer_accounts);
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(result.is_err(), "Offer with same token mints should fail");
 }
 
 #[test]
 fn test_zero_token_b_wanted_amount_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &alice,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Try to create offer with zero token_b_wanted_amount
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -422,10 +254,10 @@ fn test_zero_token_b_wanted_amount_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(
         result.is_err(),
@@ -435,48 +267,24 @@ fn test_zero_token_b_wanted_amount_fails() {
 
 #[test]
 fn test_zero_token_a_offered_amount_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &alice,
-    );
-
-    let alice_initial_token_a = 10 * TOKEN_A;
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Try to create offer with zero token_a_offered_amount
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -489,10 +297,10 @@ fn test_zero_token_a_offered_amount_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(
         result.is_err(),
@@ -761,85 +569,25 @@ fn test_non_maker_cannot_refund_offer() {
 
 #[test]
 fn test_take_offer_insufficient_funds_fails() {
-    let mut litesvm = LiteSVM::new();
-    let program_id = get_program_id();
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
-
-    let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
-    let alice = create_wallet(&mut litesvm, 1_000_000_000);
-    let bob = create_wallet(&mut litesvm, 1_000_000_000);
-
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
-
-    let alice_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_a.pubkey(),
-        &alice,
-    );
-    let bob_token_account_a = create_associated_token_account(
-        &mut litesvm,
-        &bob,
-        &token_mint_a.pubkey(),
-        &bob,
-    );
-    let bob_token_account_b = create_associated_token_account(
-        &mut litesvm,
-        &bob,
-        &token_mint_b.pubkey(),
-        &bob,
-    );
-    let alice_token_account_b = create_associated_token_account(
-        &mut litesvm,
-        &alice,
-        &token_mint_b.pubkey(),
-        &alice,
-    );
-    let alice_initial_token_a = 10 * TOKEN_A;
-    let bob_initial_token_a = 1;
-    let bob_initial_token_b = 1 * TOKEN_B;
-
-    // Mint tokens to the accounts
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &alice_token_account_a,
-        alice_initial_token_a,
-        &mint_authority,
-    );
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_a.pubkey(),
-        &bob_token_account_a,
-        bob_initial_token_a,
-        &mint_authority,
-    );
-    mint_tokens_to_account(
-        &mut litesvm,
-        &token_mint_b.pubkey(),
-        &bob_token_account_b,
-        bob_initial_token_b,
-        &mint_authority,
-    );
+    let mut test_environment = setup_escrow_test();
 
     // Create an offer from Alice for a large amount of token B
-    let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance
+    let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance (he has 5)
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
-        &token_mint_a.pubkey(),
+        &test_environment.token_mint_a.pubkey(),
     );
 
     let make_offer_accounts = MakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        maker_token_account_a: alice_token_account_a,
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        maker_token_account_a: test_environment.alice_token_account_a,
         offer_account,
         vault,
     };
@@ -852,10 +600,10 @@ fn test_take_offer_insufficient_funds_fails() {
     );
 
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![make_offer_instruction],
-        &[&alice],
-        &alice.pubkey(),
+        &[&test_environment.alice],
+        &test_environment.alice.pubkey(),
     );
     assert!(result.is_ok(), "Alice's offer should succeed");
 
@@ -864,23 +612,23 @@ fn test_take_offer_insufficient_funds_fails() {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,
-        taker: bob.pubkey(),
-        maker: alice.pubkey(),
-        token_mint_a: token_mint_a.pubkey(),
-        token_mint_b: token_mint_b.pubkey(),
-        taker_token_account_a: bob_token_account_a,
-        taker_token_account_b: bob_token_account_b,
-        maker_token_account_b: alice_token_account_b,
+        taker: test_environment.bob.pubkey(),
+        maker: test_environment.alice.pubkey(),
+        token_mint_a: test_environment.token_mint_a.pubkey(),
+        token_mint_b: test_environment.token_mint_b.pubkey(),
+        taker_token_account_a: test_environment.bob_token_account_a,
+        taker_token_account_b: test_environment.bob_token_account_b,
+        maker_token_account_b: test_environment.alice_token_account_b,
         offer_account,
         vault,
     };
 
     let take_offer_instruction = build_take_offer_instruction(take_offer_accounts);
     let result = send_transaction_from_instructions(
-        &mut litesvm,
+        &mut test_environment.litesvm,
         vec![take_offer_instruction],
-        &[&bob],
-        &bob.pubkey(),
+        &[&test_environment.bob],
+        &test_environment.bob.pubkey(),
     );
     assert!(
         result.is_err(),
