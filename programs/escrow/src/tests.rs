@@ -1,7 +1,6 @@
 use litesvm::LiteSVM;
 use solana_keypair::Keypair;
 use solana_message::Message;
-use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
 
@@ -12,8 +11,9 @@ use crate::escrow_test_helpers::{
 };
 use crate::test_helpers::{
     assert_token_balance, create_associated_token_account, create_token_mint, create_wallet,
-    create_wallets, deploy_program, mint_tokens_to_account, send_transaction_from_instructions,
+    create_wallets, deploy_program, get_pda_and_bump, mint_tokens_to_account, send_transaction_from_instructions,
 };
+use crate::seeds;
 
 #[test]
 fn test_make_offer_succeeds() {
@@ -76,8 +76,7 @@ fn test_make_offer_succeeds() {
     );
 
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -185,8 +184,7 @@ fn test_duplicate_offer_id_fails() {
     );
 
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -333,8 +331,7 @@ fn test_insufficient_funds_fails() {
 
     // Try to create offer with more tokens than Alice owns
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -450,8 +447,7 @@ fn test_same_token_mints_fails() {
 
     // Try to create offer with same token mint for both token_a and token_b
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -566,8 +562,7 @@ fn test_zero_token_b_wanted_amount_fails() {
 
     // Try to create offer with zero token_b_wanted_amount
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -689,8 +684,7 @@ fn test_zero_token_a_offered_amount_fails() {
 
     // Try to create offer with zero token_a_offered_amount
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),
@@ -733,10 +727,7 @@ fn test_take_offer_success() {
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 55555u64;
-    let (offer_account, _offer_bump) = Pubkey::find_program_address(
-        &[b"offer", &offer_id.to_le_bytes()],
-        &test_environment.program_id,
-    );
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &test_environment.token_mint_a.pubkey(),
@@ -834,10 +825,7 @@ fn test_refund_offer_success() {
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 77777u64;
-    let (offer_account, _offer_bump) = Pubkey::find_program_address(
-        &[b"offer", &offer_id.to_le_bytes()],
-        &test_environment.program_id,
-    );
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &test_environment.token_mint_a.pubkey(),
@@ -920,10 +908,7 @@ fn test_non_maker_cannot_refund_offer() {
 
     // Alice creates an offer: 3 token A for 2 token B
     let offer_id = 88888u64;
-    let (offer_account, _offer_bump) = Pubkey::find_program_address(
-        &[b"offer", &offer_id.to_le_bytes()],
-        &test_environment.program_id,
-    );
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &test_environment.token_mint_a.pubkey(),
@@ -1125,8 +1110,7 @@ fn test_take_offer_insufficient_funds_fails() {
     // Create an offer from Alice for a large amount of token B
     let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance
     let offer_id = 12345u64;
-    let (offer_account, _offer_bump) =
-        Pubkey::find_program_address(&[b"offer", &offer_id.to_le_bytes()], &program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &token_mint_a.pubkey(),

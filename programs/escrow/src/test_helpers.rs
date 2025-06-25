@@ -179,3 +179,85 @@ pub fn create_wallets(litesvm: &mut LiteSVM, count: usize, airdrop_amount: u64) 
         .map(|_| create_wallet(litesvm, airdrop_amount))
         .collect()
 }
+
+pub enum Seed {
+    String(String),
+    Bytes(Vec<u8>),
+    U64(u64),
+    Address(Address),
+}
+
+impl Seed {
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Seed::String(string_value) => string_value.as_bytes().to_vec(),
+            Seed::Bytes(byte_vector) => byte_vector.clone(),
+            Seed::U64(number) => number.to_le_bytes().to_vec(),
+            Seed::Address(address) => address.to_bytes().to_vec(),
+        }
+    }
+}
+
+pub fn get_pda_and_bump(seeds: &[Seed], program_id: &Address) -> (Address, u8) {
+    let seed_bytes: Vec<Vec<u8>> = seeds.iter().map(|seed| seed.to_bytes()).collect();
+    let seed_slices: Vec<&[u8]> = seed_bytes.iter().map(|v| v.as_slice()).collect();
+    Address::find_program_address(&seed_slices, program_id)
+}
+
+
+/// Syntactic sugar for creating seed vectors with automatic type conversion.
+/// 
+/// This macro expands to `vec![seed1.into(), seed2.into(), ...]` - it's purely
+/// for reducing boilerplate and doesn't perform any compile-time magic.
+/// 
+/// # Examples
+/// 
+/// ```rust
+/// // Before (explicit):
+/// let seeds = vec!["offer".into(), offer_id.into(), user_addr.into()];
+/// 
+/// // After (with macro):
+/// let seeds = seeds!["offer", offer_id, user_addr];
+/// ```
+#[macro_export]
+macro_rules! seeds {
+    ($($seed:expr),* $(,)?) => {
+        vec![$($seed.into()),*]
+    };
+}
+
+impl From<&str> for Seed {
+    fn from(value: &str) -> Self {
+        Seed::String(value.to_string())
+    }
+}
+
+impl From<String> for Seed {
+    fn from(value: String) -> Self {
+        Seed::String(value)
+    }
+}
+
+impl From<u64> for Seed {
+    fn from(value: u64) -> Self {
+        Seed::U64(value)
+    }
+}
+
+impl From<Address> for Seed {
+    fn from(value: Address) -> Self {
+        Seed::Address(value)
+    }
+}
+
+impl From<Vec<u8>> for Seed {
+    fn from(value: Vec<u8>) -> Self {
+        Seed::Bytes(value)
+    }
+}
+
+impl From<&[u8]> for Seed {
+    fn from(value: &[u8]) -> Self {
+        Seed::Bytes(value.to_vec())
+    }
+}
