@@ -4,6 +4,7 @@ use crate::test_helpers::{
 };
 use crate::seeds;
 use litesvm::LiteSVM;
+use std::cell::Cell;
 use solana_instruction::AccountMeta;
 use solana_instruction::Instruction;
 use solana_keypair::Keypair;
@@ -176,6 +177,22 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
 
 pub fn get_program_id() -> Pubkey {
     Pubkey::from_str(PROGRAM_ID).unwrap()
+}
+
+thread_local! {
+    static OFFER_ID_COUNTER: Cell<u64> = Cell::new(1);
+}
+
+/// Generates a unique offer ID for testing
+///
+/// This function returns incrementing offer IDs starting from 1, ensuring
+/// each test gets unique IDs to avoid conflicts between test cases.
+pub fn generate_offer_id() -> u64 {
+    OFFER_ID_COUNTER.with(|counter| {
+        let id = counter.get();
+        counter.set(id + 1);
+        id
+    })
 }
 
 pub fn get_make_offer_discriminator() -> Vec<u8> {

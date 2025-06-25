@@ -2,7 +2,7 @@ use solana_signer::Signer;
 
 use crate::escrow_test_helpers::{
     build_make_offer_accounts, build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
-    execute_make_offer, execute_take_offer, execute_refund_offer,
+    execute_make_offer, execute_take_offer, execute_refund_offer, generate_offer_id,
     setup_escrow_test, RefundOfferAccounts, TakeOfferAccounts,
     TOKEN_A, TOKEN_B,
 };
@@ -15,7 +15,7 @@ use crate::seeds;
 fn test_make_offer_succeeds() {
     let mut test_environment = setup_escrow_test();
 
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -75,7 +75,7 @@ fn test_make_offer_succeeds() {
 fn test_duplicate_offer_id_fails() {
     let mut test_environment = setup_escrow_test();
 
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -136,7 +136,7 @@ fn test_insufficient_funds_fails() {
     let mut test_environment = setup_escrow_test();
 
     // Try to create offer with more tokens than Alice owns
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -173,7 +173,7 @@ fn test_same_token_mints_fails() {
     let mut test_environment = setup_escrow_test();
 
     // Try to create offer with same token mint for both token_a and token_b
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -206,7 +206,7 @@ fn test_zero_token_b_wanted_amount_fails() {
     let mut test_environment = setup_escrow_test();
 
     // Try to create offer with zero token_b_wanted_amount
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -246,7 +246,7 @@ fn test_zero_token_a_offered_amount_fails() {
     let mut test_environment = setup_escrow_test();
 
     // Try to create offer with zero token_a_offered_amount
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -286,7 +286,7 @@ fn test_take_offer_success() {
     let mut test_environment = setup_escrow_test();
 
     // Alice creates an offer: 3 token A for 2 token B
-    let offer_id = 55555u64;
+    let offer_id = generate_offer_id();
     let alice = test_environment.alice.insecure_clone();
     let alice_token_account_a = test_environment.alice_token_account_a;
     let (offer_account, vault) = execute_make_offer(
@@ -353,7 +353,7 @@ fn test_refund_offer_success() {
     let mut test_environment = setup_escrow_test();
 
     // Alice creates an offer: 3 token A for 2 token B
-    let offer_id = 77777u64;
+    let offer_id = generate_offer_id();
     let alice = test_environment.alice.insecure_clone();
     let alice_token_account_a = test_environment.alice_token_account_a;
     let (offer_account, vault) = execute_make_offer(
@@ -403,7 +403,7 @@ fn test_non_maker_cannot_refund_offer() {
     let mut test_environment = setup_escrow_test();
 
     // Alice creates an offer: 3 token A for 2 token B
-    let offer_id = 88888u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
@@ -479,7 +479,7 @@ fn test_take_offer_insufficient_funds_fails() {
 
     // Create an offer from Alice for a large amount of token B
     let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance (he has 5)
-    let offer_id = 12345u64;
+    let offer_id = generate_offer_id();
     let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_environment.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
