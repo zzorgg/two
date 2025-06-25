@@ -1,9 +1,10 @@
 use litesvm::LiteSVM;
 use solana_keypair::Keypair;
 use solana_message::Message;
+// Note Pubkeys may not be Pubkeys,his should be thought of as an Address like Address in Solana Kit.
+// TODO: fix upstream
 // https://github.com/anza-xyz/solana-sdk/issues/204
-// Using 'Address' for addresses doesn't break anything, matches Solana Kit, and I hate lies in my code.
-use solana_pubkey::Pubkey as Address;
+use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
 use spl_associated_token_account::instruction::create_associated_token_account as create_ata_instruction;
@@ -27,7 +28,7 @@ impl std::fmt::Display for TestError {
 
 impl std::error::Error for TestError {}
 
-pub fn deploy_program(litesvm: &mut LiteSVM, program_id: &Address, program_path: &str) {
+pub fn deploy_program(litesvm: &mut LiteSVM, program_id: &Pubkey, program_path: &str) {
     let program_bytes = fs::read(program_path).expect("Failed to read program binary");
     litesvm
         .set_account(
@@ -47,7 +48,7 @@ pub fn send_transaction_from_instructions(
     litesvm: &mut LiteSVM,
     instructions: Vec<solana_instruction::Instruction>,
     signers: &[&Keypair],
-    fee_payer: &Address,
+    fee_payer: &Pubkey,
 ) -> Result<(), TestError> {
     let recent_blockhash = litesvm.latest_blockhash();
     let message = Message::new(&instructions, Some(fee_payer));
@@ -100,9 +101,9 @@ pub fn create_token_mint(litesvm: &mut LiteSVM, mint_authority: &Keypair, decima
 pub fn create_associated_token_account(
     litesvm: &mut LiteSVM,
     owner: &Keypair,
-    mint: &Address,
+    mint: &Pubkey,
     mint_authority: &Keypair,
-) -> Address {
+) -> Pubkey {
     let associated_token_account =
         spl_associated_token_account::get_associated_token_address(&owner.pubkey(), mint);
 
@@ -124,8 +125,8 @@ pub fn create_associated_token_account(
 
 pub fn mint_tokens_to_account(
     litesvm: &mut LiteSVM,
-    mint: &Address,
-    token_account: &Address,
+    mint: &Pubkey,
+    token_account: &Pubkey,
     amount: u64,
     mint_authority: &Keypair,
 ) {
@@ -146,7 +147,7 @@ pub fn mint_tokens_to_account(
     litesvm.send_transaction(transaction).unwrap();
 }
 
-pub fn get_token_account_balance(litesvm: &LiteSVM, token_account: &Address) -> u64 {
+pub fn get_token_account_balance(litesvm: &LiteSVM, token_account: &Pubkey) -> u64 {
     let account = litesvm
         .get_account(token_account)
         .expect("Token account not found");
@@ -158,7 +159,7 @@ pub fn get_token_account_balance(litesvm: &LiteSVM, token_account: &Address) -> 
 
 pub fn assert_token_balance(
     litesvm: &LiteSVM,
-    token_account: &Address,
+    token_account: &Pubkey,
     expected_balance: u64,
     message: &str,
 ) {
@@ -184,7 +185,7 @@ pub enum Seed {
     String(String),
     Bytes(Vec<u8>),
     U64(u64),
-    Address(Address),
+    Address(Pubkey),
 }
 
 impl Seed {
@@ -198,24 +199,23 @@ impl Seed {
     }
 }
 
-pub fn get_pda_and_bump(seeds: &[Seed], program_id: &Address) -> (Address, u8) {
+pub fn get_pda_and_bump(seeds: &[Seed], program_id: &Pubkey) -> (Pubkey, u8) {
     let seed_bytes: Vec<Vec<u8>> = seeds.iter().map(|seed| seed.to_bytes()).collect();
     let seed_slices: Vec<&[u8]> = seed_bytes.iter().map(|v| v.as_slice()).collect();
-    Address::find_program_address(&seed_slices, program_id)
+    Pubkey::find_program_address(&seed_slices, program_id)
 }
 
-
 /// Syntactic sugar for creating seed vectors with automatic type conversion.
-/// 
+///
 /// This macro expands to `vec![seed1.into(), seed2.into(), ...]` - it's purely
 /// for reducing boilerplate and doesn't perform any compile-time magic.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
 /// // Before (explicit):
 /// let seeds = vec!["offer".into(), offer_id.into(), user_addr.into()];
-/// 
+///
 /// // After (with macro):
 /// let seeds = seeds!["offer", offer_id, user_addr];
 /// ```
@@ -244,8 +244,8 @@ impl From<u64> for Seed {
     }
 }
 
-impl From<Address> for Seed {
-    fn from(value: Address) -> Self {
+impl From<Pubkey> for Seed {
+    fn from(value: Pubkey) -> Self {
         Seed::Address(value)
     }
 }
