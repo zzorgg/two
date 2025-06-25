@@ -98,26 +98,27 @@ pub fn create_token_mint(litesvm: &mut LiteSVM, mint_authority: &Keypair, decima
     mint
 }
 
+
 pub fn create_associated_token_account(
     litesvm: &mut LiteSVM,
     owner: &Keypair,
     mint: &Pubkey,
-    mint_authority: &Keypair,
+    payer: &Keypair,
 ) -> Pubkey {
     let associated_token_account =
         spl_associated_token_account::get_associated_token_address(&owner.pubkey(), mint);
 
     let create_ata_instruction = create_ata_instruction(
-        &mint_authority.pubkey(),
+        &payer.pubkey(),
         &owner.pubkey(),
         mint,
         &spl_token::id(),
     );
 
-    let message = Message::new(&[create_ata_instruction], Some(&mint_authority.pubkey()));
+    let message = Message::new(&[create_ata_instruction], Some(&payer.pubkey()));
     let mut transaction = Transaction::new_unsigned(message);
     let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[mint_authority], blockhash);
+    transaction.sign(&[payer], blockhash);
     litesvm.send_transaction(transaction).unwrap();
 
     associated_token_account

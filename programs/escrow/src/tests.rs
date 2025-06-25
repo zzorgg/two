@@ -1,7 +1,5 @@
 use litesvm::LiteSVM;
-use solana_message::Message;
 use solana_signer::Signer;
-use solana_transaction::Transaction;
 
 use crate::escrow_test_helpers::{
     build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
@@ -257,44 +255,21 @@ fn test_insufficient_funds_fails() {
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &alice,
     );
-    let create_associated_token_account_instruction =
-        spl_associated_token_account::instruction::create_associated_token_account(
-            &alice.pubkey(),
-            &alice.pubkey(),
-            &token_mint_a.pubkey(),
-            &spl_token::ID,
-        );
-    let message = Message::new(
-        &[create_associated_token_account_instruction],
-        Some(&alice.pubkey()),
-    );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&alice], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     let alice_initial_token_a = 10 * TOKEN_A;
-    let initialize_mint_instruction = spl_token::instruction::mint_to(
-        &spl_token::ID,
+    mint_tokens_to_account(
+        &mut litesvm,
         &token_mint_a.pubkey(),
         &alice_token_account_a,
-        &mint_authority.pubkey(),
-        &[],
         alice_initial_token_a,
-    )
-    .unwrap();
-    let message = Message::new(
-        &[initialize_mint_instruction],
-        Some(&mint_authority.pubkey()),
+        &mint_authority,
     );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&mint_authority], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     // Try to create offer with more tokens than Alice owns
     let offer_id = 12345u64;
@@ -343,44 +318,21 @@ fn test_same_token_mints_fails() {
 
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &alice,
     );
-    let create_associated_token_account_instruction =
-        spl_associated_token_account::instruction::create_associated_token_account(
-            &alice.pubkey(),
-            &alice.pubkey(),
-            &token_mint_a.pubkey(),
-            &spl_token::ID,
-        );
-    let message = Message::new(
-        &[create_associated_token_account_instruction],
-        Some(&alice.pubkey()),
-    );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&alice], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     let alice_initial_token_a = 10 * TOKEN_A;
-    let initialize_mint_instruction = spl_token::instruction::mint_to(
-        &spl_token::ID,
+    mint_tokens_to_account(
+        &mut litesvm,
         &token_mint_a.pubkey(),
         &alice_token_account_a,
-        &mint_authority.pubkey(),
-        &[],
         alice_initial_token_a,
-    )
-    .unwrap();
-    let message = Message::new(
-        &[initialize_mint_instruction],
-        Some(&mint_authority.pubkey()),
+        &mint_authority,
     );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&mint_authority], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     // Try to create offer with same token mint for both token_a and token_b
     let offer_id = 12345u64;
@@ -426,44 +378,21 @@ fn test_zero_token_b_wanted_amount_fails() {
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &alice,
     );
-    let create_associated_token_account_instruction =
-        spl_associated_token_account::instruction::create_associated_token_account(
-            &alice.pubkey(),
-            &alice.pubkey(),
-            &token_mint_a.pubkey(),
-            &spl_token::ID,
-        );
-    let message = Message::new(
-        &[create_associated_token_account_instruction],
-        Some(&alice.pubkey()),
-    );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&alice], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     let alice_initial_token_a = 10 * TOKEN_A;
-    let initialize_mint_instruction = spl_token::instruction::mint_to(
-        &spl_token::ID,
+    mint_tokens_to_account(
+        &mut litesvm,
         &token_mint_a.pubkey(),
         &alice_token_account_a,
-        &mint_authority.pubkey(),
-        &[],
         alice_initial_token_a,
-    )
-    .unwrap();
-    let message = Message::new(
-        &[initialize_mint_instruction],
-        Some(&mint_authority.pubkey()),
+        &mint_authority,
     );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&mint_authority], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     // Try to create offer with zero token_b_wanted_amount
     let offer_id = 12345u64;
@@ -516,44 +445,21 @@ fn test_zero_token_a_offered_amount_fails() {
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &alice,
     );
-    let create_associated_token_account_instruction =
-        spl_associated_token_account::instruction::create_associated_token_account(
-            &alice.pubkey(),
-            &alice.pubkey(),
-            &token_mint_a.pubkey(),
-            &spl_token::ID,
-        );
-    let message = Message::new(
-        &[create_associated_token_account_instruction],
-        Some(&alice.pubkey()),
-    );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&alice], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     let alice_initial_token_a = 10 * TOKEN_A;
-    let initialize_mint_instruction = spl_token::instruction::mint_to(
-        &spl_token::ID,
+    mint_tokens_to_account(
+        &mut litesvm,
         &token_mint_a.pubkey(),
         &alice_token_account_a,
-        &mint_authority.pubkey(),
-        &[],
         alice_initial_token_a,
-    )
-    .unwrap();
-    let message = Message::new(
-        &[initialize_mint_instruction],
-        Some(&mint_authority.pubkey()),
+        &mint_authority,
     );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&mint_authority], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
 
     // Try to create offer with zero token_a_offered_amount
     let offer_id = 12345u64;
@@ -866,87 +772,56 @@ fn test_take_offer_insufficient_funds_fails() {
     let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
     let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
-    let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_a.pubkey(),
+        &alice,
     );
-    let bob_token_account_a = spl_associated_token_account::get_associated_token_address(
-        &bob.pubkey(),
+    let bob_token_account_a = create_associated_token_account(
+        &mut litesvm,
+        &bob,
         &token_mint_a.pubkey(),
+        &bob,
     );
-    let bob_token_account_b = spl_associated_token_account::get_associated_token_address(
-        &bob.pubkey(),
+    let bob_token_account_b = create_associated_token_account(
+        &mut litesvm,
+        &bob,
         &token_mint_b.pubkey(),
+        &bob,
     );
-    let alice_token_account_b = spl_associated_token_account::get_associated_token_address(
-        &alice.pubkey(),
+    let alice_token_account_b = create_associated_token_account(
+        &mut litesvm,
+        &alice,
         &token_mint_b.pubkey(),
+        &alice,
     );
     let alice_initial_token_a = 10 * TOKEN_A;
     let bob_initial_token_a = 1;
     let bob_initial_token_b = 1 * TOKEN_B;
 
-    // Create associated token accounts for Alice and Bob for both token mints
-    for (owner, mint, _ata) in [
-        (&alice, &token_mint_a, &alice_token_account_a),
-        (&bob, &token_mint_a, &bob_token_account_a),
-        (&bob, &token_mint_b, &bob_token_account_b),
-        (&alice, &token_mint_b, &alice_token_account_b),
-    ] {
-        let create_associated_token_account_instruction =
-            spl_associated_token_account::instruction::create_associated_token_account(
-                &owner.pubkey(),
-                &owner.pubkey(),
-                &mint.pubkey(),
-                &spl_token::ID,
-            );
-        let message = Message::new(
-            &[create_associated_token_account_instruction],
-            Some(&owner.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[owner], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
-
     // Mint tokens to the accounts
-    let mint_to_instructions = vec![
-        (
-            token_mint_a.pubkey(),
-            alice_token_account_a,
-            alice_initial_token_a,
-        ),
-        (
-            token_mint_a.pubkey(),
-            bob_token_account_a,
-            bob_initial_token_a,
-        ),
-        (
-            token_mint_b.pubkey(),
-            bob_token_account_b,
-            bob_initial_token_b,
-        ),
-    ];
-    for (mint, ata, amount) in mint_to_instructions {
-        let initialize_mint_instruction = spl_token::instruction::mint_to(
-            &spl_token::ID,
-            &mint,
-            &ata,
-            &mint_authority.pubkey(),
-            &[],
-            amount,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &alice_token_account_a,
+        alice_initial_token_a,
+        &mint_authority,
+    );
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_a.pubkey(),
+        &bob_token_account_a,
+        bob_initial_token_a,
+        &mint_authority,
+    );
+    mint_tokens_to_account(
+        &mut litesvm,
+        &token_mint_b.pubkey(),
+        &bob_token_account_b,
+        bob_initial_token_b,
+        &mint_authority,
+    );
 
     // Create an offer from Alice for a large amount of token B
     let large_token_b_amount = 1000 * TOKEN_B; // Much larger than Bob's balance
