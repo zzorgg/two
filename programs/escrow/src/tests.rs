@@ -1,5 +1,4 @@
 use litesvm::LiteSVM;
-use solana_keypair::Keypair;
 use solana_message::Message;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
@@ -255,40 +254,8 @@ fn test_insufficient_funds_fails() {
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82],
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
@@ -374,37 +341,7 @@ fn test_same_token_mints_fails() {
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
-    let token_mint_a = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    litesvm
-        .set_account(
-            token_mint_a.pubkey(),
-            solana_account::Account {
-                lamports: rent,
-                data: vec![0u8; 82],
-                owner: spl_token::ID,
-                executable: false,
-                rent_epoch: 0,
-            },
-        )
-        .unwrap();
-    let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-        &spl_token::ID,
-        &token_mint_a.pubkey(),
-        &mint_authority.pubkey(),
-        None,
-        decimals,
-    )
-    .unwrap();
-    let message = Message::new(
-        &[initialize_mint_instruction],
-        Some(&mint_authority.pubkey()),
-    );
-    let mut transaction = Transaction::new_unsigned(message);
-    let blockhash = litesvm.latest_blockhash();
-    transaction.sign(&[&mint_authority], blockhash);
-    litesvm.send_transaction(transaction).unwrap();
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
@@ -486,40 +423,8 @@ fn test_zero_token_b_wanted_amount_fails() {
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82],
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
@@ -608,40 +513,8 @@ fn test_zero_token_a_offered_amount_fails() {
     let mint_authority = create_wallet(&mut litesvm, 1_000_000_000);
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
 
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82],
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
@@ -990,40 +863,8 @@ fn test_take_offer_insufficient_funds_fails() {
     let alice = create_wallet(&mut litesvm, 1_000_000_000);
     let bob = create_wallet(&mut litesvm, 1_000_000_000);
 
-    let token_mint_a = Keypair::new();
-    let token_mint_b = Keypair::new();
-    let decimals = 9u8;
-    let rent = litesvm.minimum_balance_for_rent_exemption(82);
-    for mint in [&token_mint_a, &token_mint_b] {
-        litesvm
-            .set_account(
-                mint.pubkey(),
-                solana_account::Account {
-                    lamports: rent,
-                    data: vec![0u8; 82],
-                    owner: spl_token::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .unwrap();
-        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
-            &spl_token::ID,
-            &mint.pubkey(),
-            &mint_authority.pubkey(),
-            None,
-            decimals,
-        )
-        .unwrap();
-        let message = Message::new(
-            &[initialize_mint_instruction],
-            Some(&mint_authority.pubkey()),
-        );
-        let mut transaction = Transaction::new_unsigned(message);
-        let blockhash = litesvm.latest_blockhash();
-        transaction.sign(&[&mint_authority], blockhash);
-        litesvm.send_transaction(transaction).unwrap();
-    }
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
 
     let alice_token_account_a = spl_associated_token_account::get_associated_token_address(
         &alice.pubkey(),
