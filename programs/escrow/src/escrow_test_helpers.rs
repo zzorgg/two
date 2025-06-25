@@ -203,6 +203,33 @@ pub struct MakeOfferAccounts {
     pub vault: Pubkey,
 }
 
+/// Helper function to create MakeOfferAccounts with standard program IDs
+///
+/// This function eliminates the repetitive initialization of the three standard
+/// program IDs (associated_token_program, token_program, system_program) that
+/// are always the same constants across all tests. Instead of copy-pasting
+/// these three lines in every test, this helper focuses on the variable fields.
+pub fn build_make_offer_accounts(
+    maker: Pubkey,
+    token_mint_a: Pubkey,
+    token_mint_b: Pubkey,
+    maker_token_account_a: Pubkey,
+    offer_account: Pubkey,
+    vault: Pubkey,
+) -> MakeOfferAccounts {
+    MakeOfferAccounts {
+        associated_token_program: spl_associated_token_account::ID,
+        token_program: spl_token::ID,
+        system_program: anchor_lang::system_program::ID,
+        maker,
+        token_mint_a,
+        token_mint_b,
+        maker_token_account_a,
+        offer_account,
+        vault,
+    }
+}
+
 pub fn build_make_offer_instruction(
     offer_id: u64,
     token_a_offered_amount: u64,

@@ -2,7 +2,7 @@ use litesvm::LiteSVM;
 use solana_signer::Signer;
 
 use crate::escrow_test_helpers::{
-    build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
+    build_make_offer_accounts, build_make_offer_instruction, build_refund_offer_instruction, build_take_offer_instruction,
     get_program_id, setup_escrow_test, MakeOfferAccounts, RefundOfferAccounts, TakeOfferAccounts,
     TOKEN_A, TOKEN_B,
 };
@@ -23,17 +23,14 @@ fn test_make_offer_succeeds() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -50,17 +47,14 @@ fn test_make_offer_succeeds() {
     )
     .unwrap();
 
-    let make_offer_accounts_with_existing_offer_id = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.bob.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.bob_token_account_a,
+    let make_offer_accounts_with_existing_offer_id = build_make_offer_accounts(
+        test_environment.bob.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.bob_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
@@ -89,17 +83,14 @@ fn test_duplicate_offer_id_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -116,17 +107,14 @@ fn test_duplicate_offer_id_fails() {
     );
     assert!(result.is_ok(), "First offer should succeed");
 
-    let make_offer_accounts_with_existing_offer_id = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.bob.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.bob_token_account_a,
+    let make_offer_accounts_with_existing_offer_id = build_make_offer_accounts(
+        test_environment.bob.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.bob_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
@@ -156,17 +144,14 @@ fn test_insufficient_funds_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -196,17 +181,14 @@ fn test_same_token_mints_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_a.pubkey(), // Same mint for both
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_a.pubkey(), // Same mint for both
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction =
         build_make_offer_instruction(offer_id, 1 * TOKEN_A, 1 * TOKEN_B, make_offer_accounts);
@@ -232,17 +214,14 @@ fn test_zero_token_b_wanted_amount_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -275,17 +254,14 @@ fn test_zero_token_a_offered_amount_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -318,17 +294,14 @@ fn test_take_offer_success() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -416,17 +389,14 @@ fn test_refund_offer_success() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -499,17 +469,14 @@ fn test_non_maker_cannot_refund_offer() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
@@ -578,17 +545,14 @@ fn test_take_offer_insufficient_funds_fails() {
         &test_environment.token_mint_a.pubkey(),
     );
 
-    let make_offer_accounts = MakeOfferAccounts {
-        associated_token_program: spl_associated_token_account::ID,
-        token_program: spl_token::ID,
-        system_program: anchor_lang::system_program::ID,
-        maker: test_environment.alice.pubkey(),
-        token_mint_a: test_environment.token_mint_a.pubkey(),
-        token_mint_b: test_environment.token_mint_b.pubkey(),
-        maker_token_account_a: test_environment.alice_token_account_a,
+    let make_offer_accounts = build_make_offer_accounts(
+        test_environment.alice.pubkey(),
+        test_environment.token_mint_a.pubkey(),
+        test_environment.token_mint_b.pubkey(),
+        test_environment.alice_token_account_a,
         offer_account,
         vault,
-    };
+    );
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
