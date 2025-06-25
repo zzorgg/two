@@ -37,8 +37,8 @@ fn test_make_offer_succeeds() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        1 * TOKEN_A, // token_a_offered_amount
-        1 * TOKEN_B, // token_b_wanted_amount
+        1 * TOKEN_A,
+        1 * TOKEN_B,
         make_offer_accounts,
     );
 
@@ -64,8 +64,8 @@ fn test_make_offer_succeeds() {
 
     let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
-        1 * TOKEN_A, // token_a_offered_amount
-        1 * TOKEN_B, // token_b_wanted_amount
+        1 * TOKEN_A,
+        1 * TOKEN_B,
         make_offer_accounts_with_existing_offer_id,
     );
 
@@ -103,8 +103,8 @@ fn test_duplicate_offer_id_fails() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        1 * TOKEN_A, // token_a_offered_amount
-        1 * TOKEN_B, // token_b_wanted_amount
+        1 * TOKEN_A,
+        1 * TOKEN_B,
         make_offer_accounts,
     );
 
@@ -130,8 +130,8 @@ fn test_duplicate_offer_id_fails() {
 
     let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
         offer_id,
-        1 * TOKEN_A, // token_a_offered_amount
-        1 * TOKEN_B, // token_b_wanted_amount
+        1 * TOKEN_A,
+        1 * TOKEN_B,
         make_offer_accounts_with_existing_offer_id,
     );
 
@@ -332,8 +332,8 @@ fn test_take_offer_success() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        3 * TOKEN_A, // token_a_offered_amount
-        2 * TOKEN_B, // token_b_wanted_amount
+        3 * TOKEN_A,
+        2 * TOKEN_B,
         make_offer_accounts,
     );
 
@@ -430,8 +430,8 @@ fn test_refund_offer_success() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        3 * TOKEN_A, // token_a_offered_amount
-        2 * TOKEN_B, // token_b_wanted_amount
+        3 * TOKEN_A,
+        2 * TOKEN_B,
         make_offer_accounts,
     );
 
@@ -513,8 +513,8 @@ fn test_non_maker_cannot_refund_offer() {
 
     let make_offer_instruction = build_make_offer_instruction(
         offer_id,
-        3 * TOKEN_A, // token_a_offered_amount
-        2 * TOKEN_B, // token_b_wanted_amount
+        3 * TOKEN_A,
+        2 * TOKEN_B,
         make_offer_accounts,
     );
 
