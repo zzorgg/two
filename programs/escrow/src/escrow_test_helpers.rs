@@ -1,8 +1,7 @@
-use crate::test_helpers::{
+use solana_kite::{
     create_associated_token_account, create_token_mint, deploy_program, mint_tokens_to_account,
-    send_transaction_from_instructions, get_pda_and_bump,
+    send_transaction_from_instructions, get_pda_and_bump, SolanaKiteError,
 };
-use crate::seeds;
 use litesvm::LiteSVM;
 use std::cell::Cell;
 use solana_instruction::AccountMeta;
@@ -98,7 +97,7 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
     let program_id = get_program_id();
 
     // Deploy the escrow program
-    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so");
+    deploy_program(&mut litesvm, &program_id, "../../target/deploy/escrow.so").unwrap();
 
     // Create and fund mint authority
     let mint_authority = Keypair::new();
@@ -107,8 +106,8 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
         .unwrap();
 
     // Create token mints
-    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9);
-    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9);
+    let token_mint_a = create_token_mint(&mut litesvm, &mint_authority, 9).unwrap();
+    let token_mint_b = create_token_mint(&mut litesvm, &mint_authority, 9).unwrap();
 
     // Create and fund Alice and Bob
     let alice = Keypair::new();
@@ -122,25 +121,25 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
         &alice,
         &token_mint_a.pubkey(),
         &mint_authority,
-    );
+    ).unwrap();
     let alice_token_account_b = create_associated_token_account(
         &mut litesvm,
         &alice,
         &token_mint_b.pubkey(),
         &mint_authority,
-    );
+    ).unwrap();
     let bob_token_account_a = create_associated_token_account(
         &mut litesvm,
         &bob,
         &token_mint_a.pubkey(),
         &mint_authority,
-    );
+    ).unwrap();
     let bob_token_account_b = create_associated_token_account(
         &mut litesvm,
         &bob,
         &token_mint_b.pubkey(),
         &mint_authority,
-    );
+    ).unwrap();
 
     // Mint initial token balances
     // Alice: 10 token A, 0 token B
@@ -151,14 +150,14 @@ pub fn setup_escrow_test() -> EscrowTestEnvironment {
         &alice_token_account_a,
         10 * TOKEN_A, // Alice gets 10 token A
         &mint_authority,
-    );
+    ).unwrap();
     mint_tokens_to_account(
         &mut litesvm,
         &token_mint_b.pubkey(),
         &bob_token_account_b,
         5 * TOKEN_B, // Bob gets 5 token B
         &mint_authority,
-    );
+    ).unwrap();
 
     EscrowTestEnvironment {
         litesvm,
@@ -361,9 +360,9 @@ pub fn execute_make_offer(
     maker_token_account_a: Pubkey,
     token_a_offered_amount: u64,
     token_b_wanted_amount: u64,
-) -> Result<(Pubkey, Pubkey), crate::test_helpers::TestError> {
+) -> Result<(Pubkey, Pubkey), SolanaKiteError> {
     // Create PDAs
-    let (offer_account, _offer_bump) = get_pda_and_bump(&seeds!["offer", offer_id], &test_env.program_id);
+    let (offer_account, _offer_bump) = get_pda_and_bump(&[b"offer".as_ref().into(), offer_id.to_le_bytes().as_ref().into()], &test_env.program_id);
     let vault = spl_associated_token_account::get_associated_token_address(
         &offer_account,
         &test_env.token_mint_a.pubkey(),
@@ -407,7 +406,7 @@ pub fn execute_take_offer(
     maker_token_account_b: Pubkey,
     offer_account: Pubkey,
     vault: Pubkey,
-) -> Result<(), crate::test_helpers::TestError> {
+) -> Result<(), SolanaKiteError> {
     let take_offer_accounts = TakeOfferAccounts {
         associated_token_program: spl_associated_token_account::ID,
         token_program: spl_token::ID,
@@ -440,7 +439,7 @@ pub fn execute_refund_offer(
     maker_token_account_a: Pubkey,
     offer_account: Pubkey,
     vault: Pubkey,
-) -> Result<(), crate::test_helpers::TestError> {
+) -> Result<(), SolanaKiteError> {
     let refund_offer_accounts = RefundOfferAccounts {
         token_program: spl_token::ID,
         system_program: anchor_lang::system_program::ID,

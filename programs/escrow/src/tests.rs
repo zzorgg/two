@@ -6,10 +6,9 @@ use crate::escrow_test_helpers::{
     setup_escrow_test, RefundOfferAccounts, TakeOfferAccounts,
     TOKEN_A, TOKEN_B,
 };
-use crate::test_helpers::{
-    assert_token_balance, check_account_is_closed, get_pda_and_bump, send_transaction_from_instructions,
+use solana_kite::{
+    assert_token_balance, check_account_is_closed, get_pda_and_bump, seeds, send_transaction_from_instructions,
 };
-use crate::seeds;
 
 #[test]
 fn test_make_offer_succeeds() {

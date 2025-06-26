@@ -10,8 +10,6 @@ pub mod error;
 pub mod handlers;
 pub mod state;
 
-#[cfg(test)]
-mod test_helpers;
 
 #[cfg(test)]
 mod escrow_test_helpers;
