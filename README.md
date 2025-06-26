@@ -20,7 +20,7 @@ This makes **Anchor Escrow 2025** the perfect starting point for anyone diving i
 
 Check out the **full animated explanation** of the Escrow program from mySolana TURBIN3 video:
 
-[![Full animated explanation of the Escrow program](https://img.youtube.com/vi/ZMB_OqLIeGw/maxresdefault.jpg)](https://www.youtube.com/watch?v=ZMB_OqLIeGw)
+[![Full animated explanation of the Escrow program](https://img.youtube.com/vi/B5eBWWQfQuM/maxresdefault.jpg)](https://www.youtube.com/watch?v=B5eBWWQfQuM)
 
 This repository is [designed for teaching and learning](CHANGELOG.md).
 
