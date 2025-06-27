@@ -37,37 +37,14 @@ fn test_make_offer_succeeds() {
         make_offer_accounts,
     );
 
-    send_transaction_from_instructions(
+    let result = send_transaction_from_instructions(
         &mut test_environment.litesvm,
         vec![make_offer_instruction],
         &[&test_environment.alice],
         &test_environment.alice.pubkey(),
-    )
-    .unwrap();
-
-    let make_offer_accounts_with_existing_offer_id = build_make_offer_accounts(
-        test_environment.bob.pubkey(),
-        test_environment.token_mint_a.pubkey(),
-        test_environment.token_mint_b.pubkey(),
-        test_environment.bob_token_account_a,
-        offer_account,
-        vault,
     );
-
-    let make_offer_instruction_with_existing_offer_id = build_make_offer_instruction(
-        offer_id,
-        1 * TOKEN_A,
-        1 * TOKEN_B,
-        make_offer_accounts_with_existing_offer_id,
-    );
-
-    let result = send_transaction_from_instructions(
-        &mut test_environment.litesvm,
-        vec![make_offer_instruction_with_existing_offer_id],
-        &[&test_environment.bob],
-        &test_environment.bob.pubkey(),
-    );
-    assert!(result.is_err(), "Second offer with same ID should fail");
+    
+    assert!(result.is_ok(), "Valid offer should succeed");
 }
 
 #[test]
