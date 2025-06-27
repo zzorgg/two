@@ -18,7 +18,7 @@ This makes **Anchor Escrow 2025** the perfect starting point for anyone diving i
 
 ## Animated walk through
 
-Check out the **full animated explanation** of the Escrow program from mySolana TURBIN3 video:
+Check out the **full animated explanation** of the Escrow program (also called Swap) from this video from QuickNode:
 
 [![Full animated explanation of the Escrow program](https://img.youtube.com/vi/B5eBWWQfQuM/maxresdefault.jpg)](https://www.youtube.com/watch?v=B5eBWWQfQuM)
 
