@@ -2,7 +2,7 @@
 
 ## 🆕 Updated for Solana Kit, Kite, and Codama
 
-## 🆕 Also includes Rust/LiteSVM tests
+## 🆕 Now includes Rust/LiteSVM tests - check out `programs/escrow/src/tests.rs`
 
 [![CI Badge](https://github.com/mikemaccana/anchor-escrow-2025/actions/workflows/tests.yaml/badge.svg)](https://github.com/mikemaccana/anchor-escrow-2025/actions)
 
