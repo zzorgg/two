@@ -11,9 +11,6 @@ pub mod handlers;
 pub mod state;
 
 
-#[cfg(test)]
-mod escrow_test_helpers;
-
 declare_id!("8jR5GeNzeweq35Uo84kGP3v1NcBaZWH5u62k7PxN4T2y");
 
 #[program]
@@ -38,5 +35,7 @@ pub mod escrow {
     }
 }
 
+#[cfg(test)]
+mod escrow_test_helpers;
 #[cfg(test)]
 mod tests;
