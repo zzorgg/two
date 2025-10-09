@@ -40,4 +40,5 @@ const codama = createFromRoot(rootNodeFromAnchor(idl));
 
 // Render JavaScript.
 const generatedPath = path.join("dist", "js-client");
+// @ts-expect-error Types are the same but there seems to be an issue with branding TODO: fix.
 codama.accept(renderVisitor(generatedPath));
