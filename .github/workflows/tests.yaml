@@ -15,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       # Not using setup-anchor since it expects there to be a 0.32.0 version of 
       # @coral-xyz/anchor-cli which doesn't exist yet
-      - uses: metaDAOproject/setup-anchor@v3.1
+      - uses: metaDAOproject/setup-solana@main
         with:
           solana-cli-version: "2.1.21"
-          node-version: "22.14.0"
           
       # From https://www.anchor-lang.com/docs/installation#install-anchor-cli
       - name: Manually download Anchor binary
