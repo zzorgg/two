@@ -72,13 +72,13 @@ jobs:
       - name: Build the project
         run: |
           echo "----------------------------------------"
-          echo "Running 'anchor build'..."
+          echo "Running 'anchor build'..." | tee -a build.log
           anchor build 2>&1 | tee -a build.log
 
       - name: Run tests (TypeScript)
         run: |
           echo "----------------------------------------"
-          echo "Running 'anchor test'..."
+          echo "Running 'anchor test'..." | tee -a build.log
           anchor test 2>&1 | tee -a build.log
 
       - name: Check for any errors or warnings
