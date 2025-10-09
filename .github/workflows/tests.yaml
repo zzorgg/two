@@ -13,14 +13,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      # Not using setup-anchor since it expects there to be a 0.32.0 version of 
-      # @coral-xyz/anchor-cli which doesn't exist yet
-      - uses: metaDAOproject/setup-solana@main
+      - uses: metaDAOproject/setup-anchor@main
         with:
+          # TODO HACK The npm package @coral-xyz/anchor-cli doesn't exist yet
+          anchor-version: "0.31.1"
           solana-cli-version: "2.1.21"
-          
+          node-version: "22.14.0"
+
       # From https://www.anchor-lang.com/docs/installation#install-anchor-cli
-      - name: Manually download Anchor binary
+      # TODO remove once the npm package @coral-xyz/anchor-cli for 0.32.0 exists
+      - name: Manually update Anchor binary
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
           avm install 0.32.0
