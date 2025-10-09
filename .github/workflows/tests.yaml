@@ -15,7 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: metaDAOproject/setup-anchor@main
         with:
-          # TODO HACK The npm package @coral-xyz/anchor-cli doesn't exist yet
+          # TODO HACK The npm package @coral-xyz/anchor-cli doesn't exist yet for 0.32.0
+          # So we'll install and old version, then update it to 0.32.0 in the next step
           anchor-version: "0.31.1"
           solana-cli-version: "2.1.21"
           node-version: "22.14.0"
@@ -27,6 +28,10 @@ jobs:
           cargo install --git https://github.com/coral-xyz/anchor avm --force
           avm install 0.32.0
           avm use 0.32.0
+
+      - name: Remove unused Anchor JS package (we have Codama instead)
+        run: |
+          npm uninstall -g @coral-xyz/anchor-cli
 
       # Pre-download Cargo dependencies to avoid messages during version checks
       - name: Pre-download dependencies
