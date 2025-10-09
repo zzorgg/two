@@ -13,19 +13,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      # Not using setup-anchor since it expects there to be a 0.32.0 version of 
+      # @coral-xyz/anchor-cli which doesn't exist yet
       - uses: metaDAOproject/setup-anchor@v3.1
         with:
-          anchor-version: "0.32.0"
           solana-cli-version: "2.1.21"
           node-version: "22.14.0"
           
-      # Fix for https://github.com/solana-foundation/anchor/issues/3596
-      # TODO: Remove this once the issue is fixed
+      # From https://www.anchor-lang.com/docs/installation#install-anchor-cli
       - name: Manually download Anchor binary
         run: |
-          wget https://github.com/coral-xyz/anchor/releases/download/v0.32.0/anchor-0.32.0-x86_64-unknown-linux-gnu
-          chmod +x anchor-0.32.0-x86_64-unknown-linux-gnu
-          mv anchor-0.32.0-x86_64-unknown-linux-gnu `which anchor`
+          cargo install --git https://github.com/coral-xyz/anchor avm --force
+          avm install 0.32.0
+          avm use 0.32.0
 
       # Pre-download Cargo dependencies to avoid messages during version checks
       - name: Pre-download dependencies
