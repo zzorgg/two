@@ -73,6 +73,13 @@ jobs:
           echo "Running 'anchor test'..." | tee -a build.log
           anchor test 2>&1 | tee -a build.log
 
+      - name: Run tests (Rust)
+        run: |
+          echo "----------------------------------------"
+          echo "Running LiteSVM tests..."
+          cd programs/escrow
+          cargo test 2>&1 | tee -a build.log
+
       - name: Check for any errors or warnings
         run: |
           echo "----------------------------------------"
