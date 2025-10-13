@@ -1,6 +1,6 @@
 # Anchor Escrow 2025
 
-## 🆕 Updated for Solana Kit, Kite, and Codama
+## 🆕 Updated for Anchor 0.32.1, Solana Kit, Kite, and Codama
 
 ## 🆕 Now includes Rust/LiteSVM tests - check out `programs/escrow/src/tests.rs`
 
@@ -77,13 +77,20 @@ Using different versions may cause compatibility issues.
    npm install
    ```
 
-3. Run tests:
+3. Run TypeScript tests:
 
    ```bash
    anchor test
    ```
 
-4. Deploy the program:
+4. Run LiteSVM tests:
+
+   ```bash
+   cd programs/escrow
+   cargo test
+   ```
+
+5. Deploy the program:
    ```bash
    anchor deploy
    ```
