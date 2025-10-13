@@ -51,7 +51,7 @@ OS:
 Solana CLI:
   solana-cli 2.1.21 (src:8a085eeb; feat:1416569292, client:Agave)
 Anchor:
-  anchor-cli 0.31.1
+  anchor-cli 0.32.1
 Node:
   v22.14.0
 Rust:
@@ -80,10 +80,7 @@ Using different versions may cause compatibility issues.
 3. Run tests:
 
    ```bash
-   # RUSTUP_TOOLCHAIN is needed for consistent builds per
-   # https://solana.stackexchange.com/questions/21664/why-is-the-same-commit-of-an-anchor-repo-giving-different-results-when-run-at-di
-   # TODO: remove when no longer necessary
-   RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor test
+   anchor test
    ```
 
 4. Deploy the program:
