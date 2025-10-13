@@ -51,7 +51,7 @@ OS:
 Solana CLI:
   solana-cli 2.1.21 (src:8a085eeb; feat:1416569292, client:Agave)
 Anchor:
-  anchor-cli 0.32.0
+  anchor-cli 0.32.1
 Node:
   v22.14.0
 Rust:
