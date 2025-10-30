@@ -514,3 +514,101 @@ fn test_take_offer_insufficient_funds_fails() {
         "Take offer with insufficient funds should fail"
     );
 }
+
+#[test]
+fn test_duel_sol_flow_success() {
+    let mut env = setup_escrow_test();
+
+    // Use Alice as authority/referee for simplicity
+    let authority = env.alice.insecure_clone();
+    let player_a = env.alice.pubkey();
+    let player_b = env.bob.pubkey();
+
+    let game_id = generate_offer_id();
+    let (game_pda, _bump) = get_pda_and_bump(&seeds!("game", game_id), &env.program_id);
+
+    // Create game with small stake and near-future expiry
+    let stake = 100_000; // 0.0001 SOL
+    // Set a far-future expiry to avoid clock issues in simulated environment
+    let expiry_ts = 9_999_999_999i64;
+
+    let create_ix = crate::escrow_test_helpers::build_create_game_instruction(
+        game_id,
+        player_a,
+        player_b,
+        stake,
+        expiry_ts,
+        crate::escrow_test_helpers::CreateGameAccounts {
+            authority: authority.pubkey(),
+            system_program: anchor_lang::system_program::ID,
+            game: game_pda,
+        },
+    );
+
+    let res = send_transaction_from_instructions(
+        &mut env.litesvm,
+        vec![create_ix],
+        &[&authority],
+        &authority.pubkey(),
+    );
+    assert!(res.is_ok(), "create_game should succeed");
+
+    // Alice deposits
+    let deposit_a_ix = crate::escrow_test_helpers::build_deposit_instruction(
+        stake,
+        crate::escrow_test_helpers::DepositAccounts {
+            player: player_a,
+            system_program: anchor_lang::system_program::ID,
+            game: game_pda,
+        },
+    );
+    let res = send_transaction_from_instructions(
+        &mut env.litesvm,
+        vec![deposit_a_ix],
+        &[&env.alice],
+        &player_a,
+    );
+    assert!(res.is_ok(), "alice deposit should succeed");
+
+    // Bob deposits
+    let deposit_b_ix = crate::escrow_test_helpers::build_deposit_instruction(
+        stake,
+        crate::escrow_test_helpers::DepositAccounts {
+            player: player_b,
+            system_program: anchor_lang::system_program::ID,
+            game: game_pda,
+        },
+    );
+    let res = send_transaction_from_instructions(
+        &mut env.litesvm,
+        vec![deposit_b_ix],
+        &[&env.bob],
+        &player_b,
+    );
+    assert!(res.is_ok(), "bob deposit should succeed");
+
+    // Finalize: set Bob as winner (2)
+    let finalize_ix = crate::escrow_test_helpers::build_finalize_game_instruction(
+        2,
+        crate::escrow_test_helpers::FinalizeGameAccounts {
+            authority: authority.pubkey(),
+            winner_account: player_b,
+            system_program: anchor_lang::system_program::ID,
+            game: game_pda,
+        },
+    );
+    let res = send_transaction_from_instructions(
+        &mut env.litesvm,
+        vec![finalize_ix],
+        &[&authority],
+        &authority.pubkey(),
+    );
+    assert!(res.is_ok(), "finalize_game should succeed");
+
+    // Check that the game account is closed
+    check_account_is_closed(
+        &env.litesvm,
+        &game_pda,
+        "Game account should be closed after finalize",
+    );
+}

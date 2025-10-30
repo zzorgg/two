@@ -28,6 +28,30 @@ pub mod escrow {
     pub fn refund_offer(context: Context<RefundOffer>) -> Result<()> {
         handlers::refund_offer::refund_offer(context)
     }
+
+    // Native SOL duel escrow instructions
+    pub fn create_game(
+        context: Context<CreateGame>,
+        id: u64,
+        player_a: Pubkey,
+        player_b: Pubkey,
+        stake_lamports: u64,
+        expiry_ts: i64,
+    ) -> Result<()> {
+        handlers::game_create::create_game(context, id, player_a, player_b, stake_lamports, expiry_ts)
+    }
+
+    pub fn deposit(context: Context<Deposit>, amount: u64) -> Result<()> {
+        handlers::game_deposit::deposit(context, amount)
+    }
+
+    pub fn finalize_game(context: Context<FinalizeGame>, winner: u8) -> Result<()> {
+        handlers::game_finalize::finalize_game(context, winner)
+    }
+
+    pub fn cancel_game(context: Context<CancelGame>) -> Result<()> {
+        handlers::game_cancel::cancel_game(context)
+    }
 }
 
 #[cfg(test)]

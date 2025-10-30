@@ -25,4 +25,26 @@ pub enum ErrorCode {
 
     #[msg("Failed to close vault during refund")]
     FailedRefundClosure,
+
+    // Native SOL duel errors
+    #[msg("Only the authority or eligible player may perform this action")]
+    Unauthorized,
+
+    #[msg("Stake amount does not match the game's stake")]
+    StakeAmountMismatch,
+
+    #[msg("Player has already deposited")]
+    AlreadyDeposited,
+
+    #[msg("Required deposits not completed")]
+    DepositsIncomplete,
+
+    #[msg("Game has not expired yet")]
+    NotExpired,
+
+    #[msg("Invalid winner specified")]
+    InvalidWinner,
+
+    #[msg("Lamports transfer failed")]
+    LamportsTransferFailed,
 }

@@ -216,6 +216,26 @@ pub fn get_refund_offer_discriminator() -> Vec<u8> {
     hashv(&[discriminator_input]).to_bytes()[..8].to_vec()
 }
 
+pub fn get_create_game_discriminator() -> Vec<u8> {
+    let discriminator_input = b"global:create_game";
+    hashv(&[discriminator_input]).to_bytes()[..8].to_vec()
+}
+
+pub fn get_deposit_discriminator() -> Vec<u8> {
+    let discriminator_input = b"global:deposit";
+    hashv(&[discriminator_input]).to_bytes()[..8].to_vec()
+}
+
+pub fn get_finalize_game_discriminator() -> Vec<u8> {
+    let discriminator_input = b"global:finalize_game";
+    hashv(&[discriminator_input]).to_bytes()[..8].to_vec()
+}
+
+pub fn get_cancel_game_discriminator() -> Vec<u8> {
+    let discriminator_input = b"global:cancel_game";
+    hashv(&[discriminator_input]).to_bytes()[..8].to_vec()
+}
+
 pub struct MakeOfferAccounts {
     pub associated_token_program: Pubkey,
     pub token_program: Pubkey,
@@ -283,6 +303,92 @@ pub fn build_make_offer_instruction(
         accounts: account_metas,
         data: instruction_data,
     }
+}
+
+pub struct CreateGameAccounts {
+    pub authority: Pubkey,
+    pub system_program: Pubkey,
+    pub game: Pubkey,
+}
+
+pub fn build_create_game_instruction(
+    id: u64,
+    player_a: Pubkey,
+    player_b: Pubkey,
+    stake_lamports: u64,
+    expiry_ts: i64,
+    accounts: CreateGameAccounts,
+) -> Instruction {
+    let mut data = get_create_game_discriminator();
+    data.extend_from_slice(&id.to_le_bytes());
+    data.extend_from_slice(player_a.as_ref());
+    data.extend_from_slice(player_b.as_ref());
+    data.extend_from_slice(&stake_lamports.to_le_bytes());
+    data.extend_from_slice(&expiry_ts.to_le_bytes());
+
+    let metas = vec![
+        AccountMeta::new(accounts.authority, true),
+        AccountMeta::new_readonly(accounts.system_program, false),
+        AccountMeta::new(accounts.game, false),
+    ];
+
+    Instruction { program_id: get_program_id(), accounts: metas, data }
+}
+
+pub struct DepositAccounts {
+    pub player: Pubkey,
+    pub system_program: Pubkey,
+    pub game: Pubkey,
+}
+
+pub fn build_deposit_instruction(amount: u64, accounts: DepositAccounts) -> Instruction {
+    let mut data = get_deposit_discriminator();
+    data.extend_from_slice(&amount.to_le_bytes());
+    let metas = vec![
+        AccountMeta::new(accounts.player, true),
+        AccountMeta::new_readonly(accounts.system_program, false),
+        AccountMeta::new(accounts.game, false),
+    ];
+    Instruction { program_id: get_program_id(), accounts: metas, data }
+}
+
+pub struct FinalizeGameAccounts {
+    pub authority: Pubkey,
+    pub winner_account: Pubkey,
+    pub system_program: Pubkey,
+    pub game: Pubkey,
+}
+
+pub fn build_finalize_game_instruction(winner: u8, accounts: FinalizeGameAccounts) -> Instruction {
+    let mut data = get_finalize_game_discriminator();
+    data.push(winner);
+    let metas = vec![
+        AccountMeta::new(accounts.authority, true),
+        AccountMeta::new(accounts.winner_account, false),
+        AccountMeta::new_readonly(accounts.system_program, false),
+        AccountMeta::new(accounts.game, false),
+    ];
+    Instruction { program_id: get_program_id(), accounts: metas, data }
+}
+
+pub struct CancelGameAccounts {
+    pub caller: Pubkey,
+    pub player_a_account: Pubkey,
+    pub player_b_account: Pubkey,
+    pub system_program: Pubkey,
+    pub game: Pubkey,
+}
+
+pub fn build_cancel_game_instruction(accounts: CancelGameAccounts) -> Instruction {
+    let data = get_cancel_game_discriminator();
+    let metas = vec![
+        AccountMeta::new(accounts.caller, true),
+        AccountMeta::new(accounts.player_a_account, false),
+        AccountMeta::new(accounts.player_b_account, false),
+        AccountMeta::new_readonly(accounts.system_program, false),
+        AccountMeta::new(accounts.game, false),
+    ];
+    Instruction { program_id: get_program_id(), accounts: metas, data }
 }
 
 pub struct TakeOfferAccounts {

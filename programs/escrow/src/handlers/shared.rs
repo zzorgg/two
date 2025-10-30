@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::system_program::{transfer, Transfer as SystemTransfer};
 
 use anchor_spl::token_interface::{
     close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface,
@@ -66,4 +67,34 @@ pub fn close_token_account<'info>(
     } else {
         CpiContext::new(token_program.to_account_info(), close_accounts)
     })
+}
+
+// Transfer lamports from one account to another, optionally signing with PDA seeds when `from` is a PDA.
+pub fn transfer_lamports<'info>(
+    from: &AccountInfo<'info>,
+    to: &AccountInfo<'info>,
+    amount: u64,
+    system_program: &Program<'info, System>,
+    owning_pda_seeds: Option<&[&[u8]]>,
+) -> Result<()> {
+    let cpi_accounts = SystemTransfer {
+        from: from.to_account_info(),
+        to: to.to_account_info(),
+    };
+
+    if let Some(seeds) = owning_pda_seeds {
+        transfer(
+            CpiContext::new_with_signer(
+                system_program.to_account_info(),
+                cpi_accounts,
+                &[seeds],
+            ),
+            amount,
+        )
+    } else {
+        transfer(
+            CpiContext::new(system_program.to_account_info(), cpi_accounts),
+            amount,
+        )
+    }
 }
