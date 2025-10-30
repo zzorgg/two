@@ -1,9 +1,13 @@
 # Credits
 
-Authors and Contributors: Mike Maccana, Turbin3, QuickNode
+[Mike Maccana](https://github.com/mikemaccana), [Turbin3](https://www.turbin3.org/), [QuickNode](https://www.quicknode.com/)
 
 ## Video References
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/x7OoYpoWAVM?si=Nm_RbX83KfUDJqlk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/B5eBWWQfQuM/maxresdefault.jpg)](https://youtu.be/B5eBWWQfQuM)
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/B5eBWWQfQuM?si=Xq_SVrc7F9QcrOVz" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+### [You don't need a bootcamp - build a Solana program (smart contract) in 30 minutes](https://youtu.be/B5eBWWQfQuM)
+
+[![Watch the video](https://img.youtube.com/vi/x7OoYpoWAVM/maxresdefault.jpg)](https://youtu.be/x7OoYpoWAVM)
+
+### [🔧 Build an Escrow Program on Solana with Anchor | Full Walkthrough by Mike MacCana](https://youtu.be/x7OoYpoWAVM)
